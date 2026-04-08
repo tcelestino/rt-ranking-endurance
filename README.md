@@ -1,6 +1,6 @@
 # Ranking Endurance
 
-Automação de atualização de rankings de corrida. O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA (Gemini), salva em arquivos JSON locais e gera a página `resultados.html` com os rankings e o arquivo `template-resultados.md` para envio no WhatsApp.
+Automação de atualização de rankings de corrida. O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA (Gemini), salva em arquivos JSON locais e gera a página `results.html` com os rankings e o arquivo `results.md` para envio no WhatsApp.
 
 ## Fluxo
 
