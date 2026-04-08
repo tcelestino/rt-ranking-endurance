@@ -1,0 +1,21 @@
+{
+  "year": 2026,
+  "currentMonth": 4,
+  "months": [
+    {
+      "month": 2,
+      "slug": "fevereiro",
+      "monthName": "Fevereiro"
+    },
+    {
+      "month": 3,
+      "slug": "marco",
+      "monthName": "Março"
+    },
+    {
+      "month": 4,
+      "slug": "abril",
+      "monthName": "Abril"
+    }
+  ]
+}
