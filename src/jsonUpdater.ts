@@ -9,7 +9,7 @@ export interface ParticipantRecord {
 const MONTH_NAMES: Record<number, string> = {
   1: "janeiro",
   2: "fevereiro",
-  3: "março",
+  3: "marco",
   4: "abril",
   5: "maio",
   6: "junho",
