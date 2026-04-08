@@ -4,10 +4,11 @@
   "description": "Automação de atualização de rankings de corrida",
   "main": "dist/index.js",
   "scripts": {
-    "update": "tsx src/index.ts",
-    "generate": "tsx src/htmlGenerator.ts",
+    "update": "tsx generator/index.ts",
+    "generate": "tsx generator/htmlGenerator.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "serve": "npx serve ."
   },
   "dependencies": {
     "@google/generative-ai": "latest",
