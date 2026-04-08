@@ -1,0 +1,10 @@
+# folders
+node_modules/
+dist/
+images/
+data/
+output/
+
+# credentials and environment variables
+credentials.json
+.env

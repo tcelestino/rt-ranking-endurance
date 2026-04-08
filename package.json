@@ -1,0 +1,23 @@
+{
+  "name": "rt-ranking",
+  "version": "1.0.0",
+  "description": "Automação de atualização de rankings de corrida",
+  "main": "dist/index.js",
+  "scripts": {
+    "update": "tsx src/index.ts",
+    "generate": "tsx src/htmlGenerator.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "latest",
+    "dotenv": "latest",
+    "google-auth-library": "latest",
+    "googleapis": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
