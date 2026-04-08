@@ -2,7 +2,7 @@
 node_modules/
 dist/
 images/
-data/
+data/.image-cache.json
 output/
 
 # credentials and environment variables
