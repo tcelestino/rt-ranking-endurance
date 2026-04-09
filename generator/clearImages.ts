@@ -1,5 +1,4 @@
 import * as path from "path";
-
 import { getImageFiles, deleteImagesFiles } from "./imageFiles";
 
 function main() {
