@@ -223,12 +223,14 @@ function buildAnnualMarkdown() {
   return "\n*RANKING ANUAL - " + state.year + "* 🏆 🏅\n" + section + "\n";
 }
 
+function setWhatsappEnabled(value) {
+  window.localStorage.setItem("whatsappEnabled", value ? "true" : "false");
+  showCopyButton();
+}
+
 function showCopyButton() {
   const $copyButton = document.querySelector(".copy-btn");
-  const storage = window.localStorage;
-
-  const isEnabled = storage.getItem("whatsappEnabled") === "true";
-
+  const isEnabled = window.localStorage.getItem("whatsappEnabled") === "true";
   $copyButton.style.display = isEnabled ? "block" : "none";
 }
 
@@ -261,6 +263,9 @@ function showToast() {
 }
 
 (function init() {
+  if (window.localStorage.getItem("whatsappEnabled") === null) {
+    window.localStorage.setItem("whatsappEnabled", "false");
+  }
   showCopyButton();
   window.addEventListener("storage", function (event) {
     if (event.key === "whatsappEnabled") {
