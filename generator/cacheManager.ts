@@ -26,11 +26,9 @@ function loadCache(): CacheFile {
   }
 }
 
-export function getCached(hash: string, date: string): CacheEntry | null {
+export function getCached(hash: string): CacheEntry | null {
   const cache = loadCache();
-  const entry = cache[hash];
-  if (!entry || entry.date !== date) return null;
-  return entry;
+  return cache[hash] ?? null;
 }
 
 export function storeCache(hash: string, entry: CacheEntry): void {
