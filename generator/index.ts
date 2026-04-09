@@ -63,7 +63,7 @@ async function main() {
     const gender = findGender(participants, runnerName);
     if (!gender) {
       console.warn(
-        `  Participante "${runnerName}" não encontrado em participantes.md — ignorando`,
+        `  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`,
       );
       continue;
     }
@@ -77,7 +77,9 @@ async function main() {
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
+        process.stdout.write(
+          ` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`,
+        );
       } else {
         km = await extractKmFromImage(imagePath);
         process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);
