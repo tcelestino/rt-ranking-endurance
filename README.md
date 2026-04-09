@@ -21,9 +21,8 @@ flowchart TD
     I --> J[output/results.md\nmarkdown para WhatsApp]
     I --> K[data/manifest.json\nlista de meses disponíveis]
 
-    K --> L[npm run serve]
-    L --> M[index.html\nfetch manifest + JSONs]
-    M --> N[Ranking calculado\nno browser]
+    L[npm run serve] --> M[index.html\nfetch manifest + JSONs]
+    K --> M
     N --> O[Botão Copiar\npara WhatsApp]
 ```
 
@@ -134,7 +133,7 @@ Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o
 
 ## Observações
 
-- O nome do arquivo define o nome do corredor (ex: `tiago.png` → `Tiago`);
-- O corredor deve estar cadastrado em `data/runners.json` para ser reconhecido;
-- O cache em `data/.image-cache.json` evita reprocessar a mesma imagem no mesmo dia;
-- `.env` e o `credentials.json` estão no `.gitignore` e nunca deve ser commitado.
+- O nome do arquivo define o nome do corredor (ex: `tiago.png` → `Tiago`)
+- O corredor deve estar cadastrado em `data/runners.json` para ser reconhecido
+- O cache em `data/.image-cache.json` evita reprocessar a mesma imagem
+- `.env` e o `credentials.json` estão no `.gitignore` e nunca devem ser commitados
