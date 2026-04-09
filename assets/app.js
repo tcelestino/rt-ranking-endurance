@@ -15,10 +15,10 @@ function formatKm(km) {
 function calcRanking(participants, data) {
   return participants
     .map(function (name) {
-      var rec = data.find(function (d) {
+      const rec = data.find(function (d) {
         return d.name.toLowerCase() === name.toLowerCase();
       });
-      var km = rec
+      const km = rec
         ? rec.km.reduce(function (a, b) {
             return a + b;
           }, 0)
@@ -34,25 +34,25 @@ function calcRanking(participants, data) {
 }
 
 function calcAnnualRanking(allMonthsData, runners) {
-  var totals = {};
+  const totals = {};
 
   allMonthsData.forEach(function (monthData) {
     [].concat(monthData.female, monthData.male).forEach(function (record) {
-      var key = record.name.toLowerCase();
-      var sum = record.km.reduce(function (a, b) {
+      const key = record.name.toLowerCase();
+      const sum = record.km.reduce(function (a, b) {
         return a + b;
       }, 0);
       totals[key] = (totals[key] || 0) + sum;
     });
   });
 
-  var allNames = [].concat(runners.female, runners.male);
-  var nameMap = {};
+  const allNames = [].concat(runners.female, runners.male);
+  const nameMap = {};
   allNames.forEach(function (n) {
     nameMap[n.toLowerCase()] = n;
   });
   allNames.forEach(function (n) {
-    var key = n.toLowerCase();
+    const key = n.toLowerCase();
     if (!(key in totals)) totals[key] = 0;
   });
 
@@ -71,9 +71,9 @@ function calcAnnualRanking(allMonthsData, runners) {
 function renderRows(runners) {
   return runners
     .map(function (r) {
-      var m = medal(r.position);
-      var medalHtml = m ? '<span class="medal">' + m + "</span>" : "";
-      var kmHtml =
+      const m = medal(r.position);
+      const medalHtml = m ? '<span class="medal">' + m + "</span>" : "";
+      const kmHtml =
         r.km === 0
           ? '<span class="zero">0km</span>'
           : '<span class="km">' + r.km.toFixed(2) + "km</span>";
@@ -96,18 +96,18 @@ function renderRows(runners) {
 }
 
 function renderUI() {
-  var tabsEl = document.getElementById("tabs");
-  var contentsEl = document.getElementById("month-contents");
-  var annualSection = document.getElementById("annual-section");
-  var annualList = document.getElementById("annual-list");
-  var loading = document.getElementById("loading");
+  const $tabsEl = document.getElementById("tabs");
+  const $contentsEl = document.getElementById("month-contents");
+  const $annualSection = document.getElementById("annual-section");
+  const $annualList = document.getElementById("annual-list");
+  const $loading = document.getElementById("loading");
 
-  loading.style.display = "none";
+  $loading.style.display = "none";
 
   // Tabs
-  tabsEl.innerHTML = state.months
+  $tabsEl.innerHTML = state.months
     .map(function (m) {
-      var active = m.month === activeMonth ? " active" : "";
+      const active = m.month === activeMonth ? " active" : "";
       return (
         '<button class="tab' +
         active +
@@ -123,9 +123,9 @@ function renderUI() {
     .join("");
 
   // Month contents
-  contentsEl.innerHTML = state.months
+  $contentsEl.innerHTML = state.months
     .map(function (m) {
-      var active = m.month === activeMonth ? " active" : "";
+      const active = m.month === activeMonth ? " active" : "";
       return (
         '<div id="content-' +
         m.month +
@@ -150,19 +150,19 @@ function renderUI() {
     .join("");
 
   // Annual
-  annualList.innerHTML = renderRows(state.annual);
-  annualSection.querySelector(".section-header").textContent =
+  $annualList.innerHTML = renderRows(state.annual);
+  $annualSection.querySelector(".section-header").textContent =
     "🏆 Ranking Anual " + state.year;
-  annualSection.style.display = "block";
+  $annualSection.style.display = "block";
 
   updateTitle();
 }
 
 function updateTitle() {
-  var m = state.months.find(function (m) {
+  const m = state.months.find(function (m) {
     return m.month === activeMonth;
   });
-  var monthName = m ? m.monthName : "";
+  const monthName = m ? m.monthName : "";
   document.getElementById("title").innerHTML =
     "R&T Clube de Corrida - Ranking Endurance<br>" +
     monthName +
@@ -178,16 +178,16 @@ function switchTab(month) {
   document.querySelectorAll(".tab").forEach(function (el) {
     el.classList.remove("active");
   });
-  var content = document.getElementById("content-" + month);
+  const content = document.getElementById("content-" + month);
   if (content) content.classList.add("active");
-  var tab = document.querySelector('[data-month="' + month + '"]');
+  const tab = document.querySelector('[data-month="' + month + '"]');
   if (tab) tab.classList.add("active");
   updateTitle();
 }
 
 function buildMonthMarkdown(m) {
-  var monthUpper = m.monthName.toUpperCase();
-  var section = function (runners) {
+  const monthUpper = m.monthName.toUpperCase();
+  const section = function (runners) {
     return runners
       .map(function (r) {
         return (
@@ -213,7 +213,7 @@ function buildMonthMarkdown(m) {
 }
 
 function buildAnnualMarkdown() {
-  var section = state.annual
+  const section = state.annual
     .map(function (r) {
       return (
         r.position + ". " + medal(r.position) + r.name + " - " + formatKm(r.km)
@@ -223,17 +223,26 @@ function buildAnnualMarkdown() {
   return "\n*RANKING ANUAL - " + state.year + "* 🏆 🏅\n" + section + "\n";
 }
 
+function showCopyButton() {
+  const $copyButton = document.querySelector(".copy-btn");
+  const storage = window.localStorage;
+
+  const isEnabled = storage.getItem("whatsappEnabled") === "true";
+
+  $copyButton.style.display = isEnabled ? "block" : "none";
+}
+
 function copyToWhatsApp() {
-  var m = state.months.find(function (m) {
+  const m = state.months.find(function (m) {
     return m.month === activeMonth;
   });
   if (!m) return;
-  var text = buildMonthMarkdown(m) + buildAnnualMarkdown();
+  const text = buildMonthMarkdown(m) + buildAnnualMarkdown();
   navigator.clipboard
     .writeText(text)
     .then(showToast)
     .catch(function () {
-      var ta = document.createElement("textarea");
+      const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
@@ -244,15 +253,20 @@ function copyToWhatsApp() {
 }
 
 function showToast() {
-  var toast = document.getElementById("toast");
+  const toast = document.getElementById("toast");
   toast.classList.add("show");
   setTimeout(function () {
     toast.classList.remove("show");
   }, 2000);
 }
 
-// Inicialização
 (function init() {
+  showCopyButton();
+  window.addEventListener("storage", function (event) {
+    if (event.key === "whatsappEnabled") {
+      showCopyButton();
+    }
+  });
   Promise.all([
     fetch("data/manifest.json").then(function (r) {
       return r.json();
@@ -262,14 +276,13 @@ function showToast() {
     }),
   ])
     .then(function (results) {
-      var manifest = results[0];
-      var runners = results[1];
+      const manifest = results[0];
+      const runners = results[1];
 
       state.year = manifest.year;
       activeMonth = manifest.currentMonth;
 
-      // Verifica se o mês atual tem dados; se não, usa o último disponível
-      var hasCurrentMonth = manifest.months.some(function (m) {
+      const hasCurrentMonth = manifest.months.some(function (m) {
         return m.month === activeMonth;
       });
       if (!hasCurrentMonth && manifest.months.length > 0) {
@@ -316,7 +329,7 @@ function showToast() {
           };
         });
 
-        var allRaw = monthsRaw.map(function (m) {
+        const allRaw = monthsRaw.map(function (m) {
           return { female: m.femaleRaw, male: m.maleRaw };
         });
         state.annual = calcAnnualRanking(allRaw, runners);
