@@ -23,7 +23,6 @@ flowchart TD
 
     L[npm run serve] --> M[index.html\nfetch manifest + JSONs]
     K --> M
-    N --> O[Botão Copiar\npara WhatsApp]
 ```
 
 ## Estrutura
