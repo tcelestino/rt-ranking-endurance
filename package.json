@@ -6,6 +6,7 @@
   "scripts": {
     "update": "tsx generator/index.ts",
     "generate": "tsx generator/htmlGenerator.ts",
+    "clear:images": "tsx generator/clearImages.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "serve": "npx serve ."

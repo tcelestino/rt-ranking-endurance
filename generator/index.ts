@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import * as path from "path";
 import "dotenv/config";
 import { extractKmFromImage } from "./imageAnalyzerGemini";
@@ -10,6 +9,7 @@ import {
   getDataFilePath,
 } from "./jsonUpdater";
 import { computeHash, getCached, storeCache } from "./cacheManager";
+import { getImageFiles } from "./imageFiles";
 
 function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -22,18 +22,6 @@ function getCurrentMonth(): number {
     if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
   }
   return new Date().getMonth() + 1;
-}
-
-function getImageFiles(imagesDir: string): string[] {
-  if (!fs.existsSync(imagesDir)) {
-    throw new Error(`Pasta "${imagesDir}" não encontrada`);
-  }
-
-  const supported = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
-  return fs
-    .readdirSync(imagesDir)
-    .filter((f) => supported.includes(path.extname(f).toLowerCase()))
-    .map((f) => path.join(imagesDir, f));
 }
 
 async function main() {
@@ -63,7 +51,7 @@ async function main() {
     const gender = findGender(participants, runnerName);
     if (!gender) {
       console.warn(
-        `  Participante "${runnerName}" não encontrado em participantes.md — ignorando`,
+        `  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`,
       );
       continue;
     }
@@ -77,7 +65,9 @@ async function main() {
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
+        process.stdout.write(
+          ` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`,
+        );
       } else {
         km = await extractKmFromImage(imagePath);
         process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);

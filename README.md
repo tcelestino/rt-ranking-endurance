@@ -32,6 +32,8 @@ rt-ranking/
 ├── generator/
 │   ├── index.ts                  # CLI principal — processa imagens e salva JSONs
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
+│   ├── clearImages.ts            # Limpa a pasta /images
+│   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
 │   ├── htmlGenerator.ts          # Gera output/results.md e data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
@@ -118,7 +120,15 @@ Gera dois arquivos:
 - `output/results.md` — markdown pronto para colar no WhatsApp
 - `data/manifest.json` — lista de meses disponíveis para o `index.html`
 
-### 3. Visualizar rankings no browser
+### 3. Limpar pasta "images
+
+```bash
+npm run clear:images
+```
+
+Remove todas imagens existentes na pasta `/images`
+
+### 4. Visualizar rankings no browser
 
 ```bash
 npm run serve

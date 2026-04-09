@@ -5,11 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Comandos
 
 ```bash
-npm run update    # processa imagens em images/ e salva km nos JSONs
-npm run generate  # lê data/*.json e gera output/results.md + data/manifest.json
-npm run serve     # sobe servidor estático na porta 3000 (acesse http://localhost:3000)
-npm run build     # compila TypeScript para dist/
-npx tsc --noEmit  # verifica tipos sem gerar arquivos
+npm run update       # processa imagens em images/ e salva km nos JSONs
+npm run generate     # lê data/*.json e gera output/results.md + data/manifest.json
+npm run clear:images # remove todos os arquivos de imagem da pasta images/
+npm run serve        # sobe servidor estático na porta 3000 (acesse http://localhost:3000)
+npm run build        # compila TypeScript para dist/
+npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
 Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run generate`.
@@ -27,6 +28,10 @@ O projeto é um script CLI Node.js/TypeScript com dois fluxos independentes:
 **`generator/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
 
 **`generator/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findGender()`.
+
+**`generator/imageFiles.ts`** — funções utilitárias para a pasta `images/`: `getImageFiles` (lista arquivos suportados) e `deleteImagesFiles` (remove os arquivos). Usado por `index.ts` e `clearImages.ts`.
+
+**`generator/clearImages.ts`** — script do comando `npm run clear:images`. Lista todas as imagens em `images/` e as remove.
 
 **`generator/cacheManager.ts`** — cache de imagens por hash SHA256 em `data/.image-cache.json`. Imagem já processada (mesmo hash) é ignorada em execuções futuras, independente da data.
 
