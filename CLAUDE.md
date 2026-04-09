@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run update       # processa imagens em images/ e salva km nos JSONs
-npm run generate     # lê data/*.json e gera output/results.md + data/manifest.json
+npm run data:generate # lê data/*.json e gera data/manifest.json
 npm run clear:images # remove todos os arquivos de imagem da pasta images/
 npm run serve        # sobe servidor estático da pasta static/ na porta 3000
 npm run build        # compila TypeScript (processor/) para dist/
@@ -15,7 +15,7 @@ npm run api:build    # compila a API para api/dist/
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
-Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run generate`.
+Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run data:generate`.
 
 ## Estrutura
 
@@ -37,7 +37,7 @@ rt-ranking/
 │   ├── participantsParser.ts
 │   ├── imageFiles.ts
 │   ├── cacheManager.ts
-│   ├── htmlGenerator.ts
+│   ├── dataGenerator.ts
 │   └── clearImages.ts
 ├── data/                       # JSONs commitados — lidos por api/ e escritos por processor/
 ├── images/                     # gitignored — input local
@@ -67,11 +67,10 @@ O projeto tem três partes independentes:
 
 **`processor/cacheManager.ts`** — cache de imagens por hash SHA256 em `data/.image-cache.json`. Imagem já processada (mesmo hash) é ignorada em execuções futuras, independente da data.
 
-### Fluxo 2 — `npm run generate` (geração de rankings)
+### Fluxo 2 — `npm run data:generate` (geração do manifest)
 
-**`processor/htmlGenerator.ts`** — lê os JSONs de `data/` e `data/runners.json`, calcula os rankings mensal (feminino, masculino) e anual, e gera dois arquivos:
-- `output/results.md` — markdown no formato WhatsApp (`*negrito*`, medalhas, km)
-- `data/manifest.json` — lista de meses disponíveis, consumida pelo frontend via API
+**`processor/dataGenerator.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
+- `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
 
 ### API — `api/src/server.ts`
 
