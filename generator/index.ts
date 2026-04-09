@@ -72,21 +72,21 @@ async function main() {
       process.stdout.write(`Processando ${filename}...`);
       const today = new Date().toISOString().slice(0, 10);
       const hash = computeHash(imagePath);
-      const cached = getCached(hash, today);
+      const cached = getCached(hash);
 
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache)`);
+        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
       } else {
         km = await extractKmFromImage(imagePath);
         process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);
         storeCache(hash, { km, date: today, filename });
-      }
 
-      const data = loadMonthData(gender, month);
-      appendKm(data, runnerName, km);
-      saveMonthData(gender, month, data);
+        const data = loadMonthData(gender, month);
+        appendKm(data, runnerName, km);
+        saveMonthData(gender, month, data);
+      }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
       results.push({ file: filename, runner: runnerName, km, gender });
