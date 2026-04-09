@@ -1,44 +1,55 @@
-# Ranking Endurance
+# R&T Clube de Corrida - Ranking Endurance
 
-Automação de atualização de rankings de corrida. O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA (Gemini), salva em arquivos JSON locais e gera a página `results.html` com os rankings e o arquivo `results.md` para envio no WhatsApp.
+Automação de atualização de rankings de corrida para o clube de corrida da R&T Academia. 
+
+O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA, utilizando o Gemini, salva em arquivos JSON locais e gera a página estática com os rankings e o arquivo `results.md` no formato markdown para compartilhamento no WhatsApp.
 
 ## Fluxo
 
-```
-images/eli.png, tiago.png
-       ↓
-  Scan pasta images/
-       ↓
-  Gemini Vision → extrai km da imagem
-       ↓
-  Salva em data/feminino-[mes].json ou data/masculino-[mes].json
-       ↓
-  npm run generate
-       ↓
-  Lê data/*.json + data/runners.json
-       ↓
-  Gera output/results.html + output/results.md
+```mermaid
+flowchart TD
+    A[images/*.png] --> B[npm run update]
+    B --> C[Scan pasta images/]
+    C --> D[Gemini API\nextrai km da imagem]
+    D --> E{Gênero via\nrunners.json}
+    E -->|feminino| F[data/female-mes.json]
+    E -->|masculino| G[data/male-mes.json]
+
+    F --> H[npm run generate]
+    G --> H
+    H --> I[Lê data/*.json\n+ data/runners.json]
+    I --> J[output/results.md\nmarkdown para WhatsApp]
+    I --> K[data/manifest.json\nlista de meses disponíveis]
+
+    K --> L[npm run serve]
+    L --> M[index.html\nfetch manifest + JSONs]
+    M --> N[Ranking calculado\nno browser]
+    N --> O[Botão Copiar\npara WhatsApp]
 ```
 
 ## Estrutura
 
 ```
 rt-ranking/
-├── src/
+├── generator/
 │   ├── index.ts                  # CLI principal — processa imagens e salva JSONs
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
-│   ├── htmlGenerator.ts          # Gera output/results.html e output/results.md
+│   ├── htmlGenerator.ts          # Gera output/results.md e data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
+├── assets/
+│   ├── app.js                    # Lógica do browser (fetch, ranking, UI)
+│   └── style.css                 # Estilos da página
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
-│   ├── feminino-[mes].json       # Dados mensais femininos (gerado automaticamente)
-│   └── masculino-[mes].json      # Dados mensais masculinos (gerado automaticamente)
+│   ├── manifest.json             # Meses disponíveis (gerado por npm run generate)
+│   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
+│   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
 ├── images/                       # Coloque aqui os screenshots dos corredores
 ├── output/
-│   ├── results.html              # Página com rankings e botão WhatsApp
 │   └── results.md                # Markdown para envio no WhatsApp
+├── index.html                    # Página estática com rankings (carrega JSONs via fetch)
 ├── .env                          # Variáveis de ambiente (não commitado)
 ├── .env.example                  # Modelo das variáveis
 ├── package.json
@@ -47,7 +58,7 @@ rt-ranking/
 
 ## Pré-requisitos
 
-- Node.js 18+
+- Node.js 22+
 - Conta no [Google AI Studio](https://aistudio.google.com) com acesso à API Gemini
 
 ## Instalação
@@ -106,8 +117,16 @@ npm run generate
 ```
 
 Gera dois arquivos:
-- `output/results.html` — abrir no browser, visualizar rankings e copiar para WhatsApp com o botão
 - `output/results.md` — markdown pronto para colar no WhatsApp
+- `data/manifest.json` — lista de meses disponíveis para o `index.html`
+
+### 3. Visualizar rankings no browser
+
+```bash
+npm run serve
+```
+
+Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o botão "Copiar para WhatsApp".
 
 ## Formatos de imagem suportados
 
@@ -115,7 +134,7 @@ Gera dois arquivos:
 
 ## Observações
 
-- O nome do arquivo define o nome do corredor (ex: `tiago.png` → `Tiago`)
-- O corredor deve estar cadastrado em `data/runners.json` para ser reconhecido
-- O cache em `data/.image-cache.json` evita reprocessar a mesma imagem no mesmo dia
-- `.env` está no `.gitignore` e nunca deve ser commitado
+- O nome do arquivo define o nome do corredor (ex: `tiago.png` → `Tiago`);
+- O corredor deve estar cadastrado em `data/runners.json` para ser reconhecido;
+- O cache em `data/.image-cache.json` evita reprocessar a mesma imagem no mesmo dia;
+- `.env` e o `credentials.json` estão no `.gitignore` e nunca deve ser commitado.
