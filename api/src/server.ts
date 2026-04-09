@@ -34,13 +34,17 @@ app.use(limiter);
 function readJsonFile(filePath: string, res: express.Response): void {
   fs.readFile(filePath, "utf-8", (err, data) => {
     if (err) {
-      res.status(404).json({ error: "Arquivo não encontrado" });
+      if (err.code === "ENOENT") {
+        res.status(404).json({ error: "Arquivo não encontrado" });
+      } else {
+        res.status(500).json({ error: "Erro ao ler arquivo" });
+      }
       return;
     }
     try {
       res.json(JSON.parse(data));
     } catch {
-      res.status(500).json({ error: "Erro ao parsear JSON" });
+      res.status(500).json({ error: "Erro ao fazer o parse do JSON" });
     }
   });
 }
@@ -53,23 +57,42 @@ app.get("/api/runners", (_req, res) => {
   readJsonFile(path.join(DATA_DIR, "runners.json"), res);
 });
 
-const MONTH_REGEX = /^[a-z]+$/;
+const VALID_MONTH_SLUGS = [
+  "janeiro",
+  "fevereiro",
+  "marco",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
 
-app.get("/api/data/:month/female", (req, res) => {
+const validateMonth = (req: Request, res: Response, next: NextFunction) => {
   const { month } = req.params;
-  if (!MONTH_REGEX.test(month)) {
-    res.status(400).json({ error: "Mês inválido" });
-    return;
+  if (
+    !month ||
+    typeof month !== "string" ||
+    !VALID_MONTH_SLUGS.includes(month)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Parâmetro de mês inválido ou ausente" });
   }
+  next();
+};
+
+app.get("/api/data/:month/female", validateMonth, (req, res) => {
+  const { month } = req.params;
   readJsonFile(path.join(DATA_DIR, `female-${month}.json`), res);
 });
 
-app.get("/api/data/:month/male", (req, res) => {
+app.get("/api/data/:month/male", validateMonth, (req, res) => {
   const { month } = req.params;
-  if (!MONTH_REGEX.test(month)) {
-    res.status(400).json({ error: "Mês inválido" });
-    return;
-  }
   readJsonFile(path.join(DATA_DIR, `male-${month}.json`), res);
 });
 
