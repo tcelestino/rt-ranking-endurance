@@ -1,7 +1,6 @@
-const API_BASE =
-  window.location.hostname === "localhost"
-    ? "http://localhost:3001"
-    : "https://rt-ranking-endurance-api.onrender.com";
+const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "http://localhost:3001"
+  : "https://rt-ranking-endurance-api.onrender.com";
 
 let activeMonth = null;
 let state = { months: [], annual: [], year: null };
