@@ -8,40 +8,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run update       # processa imagens em images/ e salva km nos JSONs
 npm run generate     # lê data/*.json e gera output/results.md + data/manifest.json
 npm run clear:images # remove todos os arquivos de imagem da pasta images/
-npm run serve        # sobe servidor estático na porta 3000 (acesse http://localhost:3000)
-npm run build        # compila TypeScript para dist/
+npm run serve        # sobe servidor estático da pasta static/ na porta 3000
+npm run build        # compila TypeScript (processor/) para dist/
+npm run api:dev      # inicia a API em modo dev na porta 3001
+npm run api:build    # compila a API para api/dist/
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
 Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run generate`.
 
+## Estrutura
+
+```
+rt-ranking/
+├── api/                        # Servidor Express (deployado no Render)
+│   ├── src/server.ts
+│   ├── package.json
+│   └── tsconfig.json
+├── static/                     # Frontend estático (deployado no Render)
+│   ├── index.html
+│   └── assets/
+│       ├── app.js
+│       └── style.css
+├── processor/                  # CLI local (não deployado)
+│   ├── index.ts
+│   ├── imageAnalyzerGemini.ts
+│   ├── jsonUpdater.ts
+│   ├── participantsParser.ts
+│   ├── imageFiles.ts
+│   ├── cacheManager.ts
+│   ├── htmlGenerator.ts
+│   └── clearImages.ts
+├── data/                       # JSONs commitados — lidos por api/ e escritos por processor/
+├── images/                     # gitignored — input local
+├── package.json                # Scripts raiz para processor/
+├── tsconfig.json               # rootDir ./processor
+├── render.yaml                 # Config de deploy no Render
+└── .gitignore
+```
+
 ## Arquitetura
 
-O projeto é um script CLI Node.js/TypeScript com dois fluxos independentes:
+O projeto tem três partes independentes:
 
 ### Fluxo 1 — `npm run update` (processamento de imagens)
 
-**`generator/index.ts`** — ponto de entrada. Lê todos os arquivos de `images/`, detecta o gênero do corredor via `participantsParser`, verifica cache, chama o analyzer e salva o km no JSON correspondente. Imagens já em cache (mesmo hash SHA256) são ignoradas — não atualizam os JSONs.
+**`processor/index.ts`** — ponto de entrada. Lê todos os arquivos de `images/`, detecta o gênero do corredor via `participantsParser`, verifica cache, chama o analyzer e salva o km no JSON correspondente. Imagens já em cache (mesmo hash SHA256) são ignoradas — não atualizam os JSONs.
 
-**`generator/imageAnalyzerGemini.ts`** — usa `gemini-2.0-flash` via `@google/genai`. Recebe o caminho da imagem e retorna `number` (km extraído).
+**`processor/imageAnalyzerGemini.ts`** — usa `gemini-2.0-flash` via `@google/genai`. Recebe o caminho da imagem e retorna `number` (km extraído).
 
-**`generator/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
+**`processor/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
 
-**`generator/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findGender()`.
+**`processor/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findGender()`.
 
-**`generator/imageFiles.ts`** — funções utilitárias para a pasta `images/`: `getImageFiles` (lista arquivos suportados) e `deleteImagesFiles` (remove os arquivos). Usado por `index.ts` e `clearImages.ts`.
+**`processor/imageFiles.ts`** — funções utilitárias para a pasta `images/`: `getImageFiles` (lista arquivos suportados) e `deleteImagesFiles` (remove os arquivos). Usado por `index.ts` e `clearImages.ts`.
 
-**`generator/clearImages.ts`** — script do comando `npm run clear:images`. Lista todas as imagens em `images/` e as remove.
+**`processor/clearImages.ts`** — script do comando `npm run clear:images`. Lista todas as imagens em `images/` e as remove.
 
-**`generator/cacheManager.ts`** — cache de imagens por hash SHA256 em `data/.image-cache.json`. Imagem já processada (mesmo hash) é ignorada em execuções futuras, independente da data.
+**`processor/cacheManager.ts`** — cache de imagens por hash SHA256 em `data/.image-cache.json`. Imagem já processada (mesmo hash) é ignorada em execuções futuras, independente da data.
 
 ### Fluxo 2 — `npm run generate` (geração de rankings)
 
-**`generator/htmlGenerator.ts`** — lê os JSONs de `data/` e `data/runners.json`, calcula os rankings mensal (feminino, masculino) e anual, e gera dois arquivos:
+**`processor/htmlGenerator.ts`** — lê os JSONs de `data/` e `data/runners.json`, calcula os rankings mensal (feminino, masculino) e anual, e gera dois arquivos:
 - `output/results.md` — markdown no formato WhatsApp (`*negrito*`, medalhas, km)
-- `data/manifest.json` — lista de meses disponíveis, consumida pelo `index.html` via `fetch()`
+- `data/manifest.json` — lista de meses disponíveis, consumida pelo frontend via API
 
-**`index.html`** — página estática na raiz do projeto. Carrega os dados via `fetch()` em runtime (`manifest.json` + JSONs mensais) e renderiza os rankings com navegação por abas e botão "Copiar para WhatsApp".
+### API — `api/src/server.ts`
+
+Servidor Express deployado no Render. Expõe os dados de `data/` via 4 endpoints:
+- `GET /api/manifest` → `data/manifest.json`
+- `GET /api/runners` → `data/runners.json`
+- `GET /api/data/:slug/female` → `data/female-{slug}.json`
+- `GET /api/data/:slug/male` → `data/male-{slug}.json`
+
+Controles: CORS (variável `ALLOWED_ORIGINS`), rate limiting (60 req/min por IP), validação de slug.
+
+### Frontend — `static/`
+
+Página estática deployada no Render. Carrega dados via `fetch()` para a API (`API_BASE` detectado automaticamente: `localhost:3001` em dev, URL de produção em prod).
+
+## Acesso a `data/` por cada parte
+
+| Quem | Como acessa | Onde roda |
+|------|-------------|-----------|
+| `processor/` | `path.resolve("data/...")` (CWD = raiz) | Local |
+| `api/src/server.ts` | `path.resolve(__dirname, "../../data")` | Render |
 
 ## Convenções dos dados
 

@@ -1,0 +1,23 @@
+{
+  "name": "rt-ranking-endurance-api",
+  "version": "1.0.0",
+  "description": "API para o R&T Clube de Corrida - Ranking Endurance",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "cors": "2.8.6",
+    "express": "5.2.1",
+    "express-rate-limit": "8.3.2"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/node": "25.5.2",
+    "tsx": "4.21.0",
+    "typescript": "6.0.2"
+  }
+}

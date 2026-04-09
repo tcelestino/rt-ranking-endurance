@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: rt-ranking-endurance-api
+    runtime: node
+    rootDir: api
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://rt-ranking-endurance.onrender.com
+
+  - type: web
+    runtime: static
+    name: rt-ranking-endurance
+    rootDir: static
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=300
