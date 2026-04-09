@@ -2,14 +2,14 @@
   "name": "rt-ranking",
   "version": "1.0.0",
   "description": "Automação de atualização de rankings de corrida",
-  "main": "dist/index.js",
   "scripts": {
-    "update": "tsx generator/index.ts",
-    "generate": "tsx generator/htmlGenerator.ts",
-    "clear:images": "tsx generator/clearImages.ts",
+    "update": "tsx processor/index.ts",
+    "generate": "tsx processor/htmlGenerator.ts",
+    "clear:images": "tsx processor/clearImages.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "serve": "npx serve ."
+    "api:dev": "cd api && npm run dev",
+    "api:build": "cd api && npm run build",
+    "serve": "npx serve static"
   },
   "dependencies": {
     "@google/genai": "1.49.0",

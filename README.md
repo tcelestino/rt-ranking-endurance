@@ -1,6 +1,6 @@
 # R&T Clube de Corrida - Ranking Endurance
 
-Automação de atualização de rankings de corrida para o clube de corrida da R&T Academia. 
+Automação de atualização de rankings de corrida para o clube de corrida da R&T Academia.
 
 O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA, utilizando o Gemini, salva em arquivos JSON locais e gera a página estática com os rankings e o arquivo `results.md` no formato markdown para compartilhamento no WhatsApp.
 
@@ -21,15 +21,24 @@ flowchart TD
     I --> J[output/results.md\nmarkdown para WhatsApp]
     I --> K[data/manifest.json\nlista de meses disponíveis]
 
-    L[npm run serve] --> M[index.html\nfetch manifest + JSONs]
-    K --> M
+    K --> L[api/src/server.ts\nExpress API]
+    L --> M[static/index.html\nfetch via API_BASE]
 ```
 
 ## Estrutura
 
 ```
 rt-ranking/
-├── generator/
+├── api/                          # Servidor Express (deployado no Render)
+│   ├── src/server.ts             # 4 endpoints REST + CORS + rate limiting
+│   ├── package.json
+│   └── tsconfig.json
+├── static/                       # Frontend estático (deployado no Render)
+│   ├── index.html                # Página com rankings e navegação por abas
+│   └── assets/
+│       ├── app.js                # Lógica do browser (fetch, ranking, UI)
+│       └── style.css             # Estilos da página
+├── processor/                    # CLI local (não deployado)
 │   ├── index.ts                  # CLI principal — processa imagens e salva JSONs
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
 │   ├── clearImages.ts            # Limpa a pasta /images
@@ -38,9 +47,6 @@ rt-ranking/
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
-├── assets/
-│   ├── app.js                    # Lógica do browser (fetch, ranking, UI)
-│   └── style.css                 # Estilos da página
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
 │   ├── manifest.json             # Meses disponíveis (gerado por npm run generate)
@@ -49,7 +55,7 @@ rt-ranking/
 ├── images/                       # Coloque aqui os screenshots dos corredores
 ├── output/
 │   └── results.md                # Markdown para envio no WhatsApp
-├── index.html                    # Página estática com rankings (carrega JSONs via fetch)
+├── render.yaml                   # Configuração de deploy no Render.com
 ├── .env                          # Variáveis de ambiente (não commitado)
 ├── .env.example                  # Modelo das variáveis
 ├── package.json
@@ -65,6 +71,7 @@ rt-ranking/
 
 ```bash
 npm install
+cd api && npm install
 ```
 
 ## Configuração
@@ -118,9 +125,9 @@ npm run generate
 
 Gera dois arquivos:
 - `output/results.md` — markdown pronto para colar no WhatsApp
-- `data/manifest.json` — lista de meses disponíveis para o `index.html`
+- `data/manifest.json` — lista de meses disponíveis para o frontend
 
-### 3. Limpar pasta "images
+### 3. Limpar pasta "images"
 
 ```bash
 npm run clear:images
@@ -128,13 +135,41 @@ npm run clear:images
 
 Remove todas imagens existentes na pasta `/images`
 
-### 4. Visualizar rankings no browser
+### 4. Visualizar rankings no browser (desenvolvimento local)
+
+Terminal 1 — inicia a API:
+
+```bash
+npm run api:dev
+```
+
+Terminal 2 — serve o frontend:
 
 ```bash
 npm run serve
 ```
 
 Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o botão "Copiar para WhatsApp".
+
+## Deploy (Render.com)
+
+O arquivo `render.yaml` configura dois serviços independentes:
+
+| Serviço | Tipo | Diretório |
+|---|---|---|
+| `rt-ranking-endurance-api` | Web (Node) | `api/` |
+| `rt-ranking-endurance-static` | Static Site | `static/` |
+
+A API lê os JSONs de `data/` (commitados no repositório) e os expõe via 4 endpoints:
+
+```
+GET /api/manifest
+GET /api/runners
+GET /api/data/:month/female
+GET /api/data/:month/male
+```
+
+O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
 
 ## Formatos de imagem suportados
 

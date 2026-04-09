@@ -1,6 +1,8 @@
 # folders
 node_modules/
+api/node_modules/
 dist/
+api/dist/
 images/
 data/.image-cache.json
 output/

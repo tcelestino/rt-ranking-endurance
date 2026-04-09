@@ -1,3 +1,8 @@
+const API_BASE =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001"
+    : "https://rt-ranking-endurance-api.onrender.com";
+
 let activeMonth = null;
 let state = { months: [], annual: [], year: null };
 
@@ -273,10 +278,10 @@ function showToast() {
     }
   });
   Promise.all([
-    fetch("data/manifest.json").then(function (r) {
+    fetch(API_BASE + "/api/manifest").then(function (r) {
       return r.json();
     }),
-    fetch("data/runners.json").then(function (r) {
+    fetch(API_BASE + "/api/runners").then(function (r) {
       return r.json();
     }),
   ])
@@ -297,14 +302,14 @@ function showToast() {
       return Promise.all(
         manifest.months.map(function (m) {
           return Promise.all([
-            fetch("data/female-" + m.slug + ".json")
+            fetch(API_BASE + "/api/data/" + m.slug + "/female")
               .then(function (r) {
                 return r.json();
               })
               .catch(function () {
                 return [];
               }),
-            fetch("data/male-" + m.slug + ".json")
+            fetch(API_BASE + "/api/data/" + m.slug + "/male")
               .then(function (r) {
                 return r.json();
               })
