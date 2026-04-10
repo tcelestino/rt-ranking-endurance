@@ -209,7 +209,7 @@ function buildMonthMarkdown(m) {
   };
   return [
     "*RANKING ENDURANCE - " + monthUpper + " " + state.year + "*",
-    "*Visualize ranking online: " + RANKING_ONLINE_URL + "*",
+    "*Visualize o ranking online:* " + RANKING_ONLINE_URL,
     "",
     "*feminino* 🏃‍♀️",
     section(m.female),
