@@ -1,5 +1,5 @@
 {
-  "name": "rt-ranking",
+  "name": "rt-ranking-endurance",
   "version": "1.0.0",
   "description": "Automação de atualização de rankings de corrida",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "25.5.2",
-    "tsx": "4.21.",
+    "tsx": "4.21.0",
     "typescript": "6.0.2"
   }
 }
