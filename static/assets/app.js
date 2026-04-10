@@ -2,6 +2,8 @@ const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? "http://localhost:3001"
   : "https://rt-ranking-endurance-api.onrender.com";
 
+const RANKING_ONLINE_URL = "https://rt-ranking-endurance.onrender.com";
+
 let activeMonth = null;
 let state = { months: [], annual: [], year: null };
 
@@ -207,6 +209,7 @@ function buildMonthMarkdown(m) {
   };
   return [
     "*RANKING ENDURANCE - " + monthUpper + " " + state.year + "*",
+    "*Visualize ranking online: " + RANKING_ONLINE_URL + "*",
     "",
     "*feminino* 🏃‍♀️",
     section(m.female),
