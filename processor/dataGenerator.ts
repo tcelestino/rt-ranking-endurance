@@ -71,7 +71,7 @@ function getAvailableMonths(): { month: number; slug: string }[] {
 }
 
 function writeManifest(
-  months: { month: number; slug: string; monthName: string }[],
+  months: MonthData[],
   currentMonth: number,
   year: number,
 ): void {
@@ -94,6 +94,7 @@ function writeManifest(
 
 function main() {
   const currentMonth = getCurrentMonth();
+  //TODO: buscar o ano a partir do nome do arquivo. Ex.: female-04-2024.json -> 2024
   const year = new Date().getFullYear();
   const availableMonths = getAvailableMonths();
 
