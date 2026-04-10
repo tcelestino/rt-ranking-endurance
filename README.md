@@ -53,7 +53,7 @@ rt-ranking/
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
 ├── images/                       # Coloque aqui os screenshots dos corredores
 ├── render.yaml                   # Configuração de deploy no Render.com
-├── .env.example                  # Variáveis de ambiente
+├── .env.example                  # Modelos das variáveis de ambiente
 ├── package.json
 └── tsconfig.json
 ```
@@ -85,11 +85,9 @@ cp .env.example .env
 | `GEMINI_API_KEY` | Chave da API Google Gemini (obrigatória) |
 | `CURRENT_MONTH` | Sobrescreve o mês atual (opcional, ex: `4` para abril) |
 
-
-
 ## Configurando o API Gemini
 
-Para usar o processamento das imagens é preciso ter adicionar sua chave da API do Gemini.
+Para usar o processamento das imagens, é preciso adicionar sua chave da API do Gemini.
 
 Para obter a chave, acesse o [https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br](https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br)
 
