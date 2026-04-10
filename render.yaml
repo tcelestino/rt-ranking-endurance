@@ -5,9 +5,11 @@ services:
     rootDir: api
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
+    branch: "main"
+    autoDeployTrigger: "commit"
     buildFilter:
       paths:
-        - api/*.ts
+        - api/**/*
         - data/*.json
     envVars:
       - key: NODE_ENV
@@ -20,6 +22,11 @@ services:
     name: rt-ranking-endurance
     rootDir: static
     staticPublishPath: .
+    branch: "main"
+    autoDeployTrigger: "commit"
+    buildFilter:
+      paths:
+        - static/**/*
     headers:
       - path: /*
         name: Cache-Control
