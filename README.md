@@ -1,8 +1,8 @@
 # R&T Clube de Corrida - Ranking Endurance
 
-Automação de atualização de rankings de corrida para o clube de corrida da R&T Academia.
+Simples monorepo para automação de atualização de rankings do clube de corrida da R&T Academia
 
-O script lê screenshots de apps de corrida (Strava, Garmin, etc.), extrai o km percorrido via IA, utilizando o Gemini, salva em arquivos JSON locais e gera a página estática com os rankings e o arquivo `results.md` no formato markdown para compartilhamento no WhatsApp.
+O script lê screenshots de apps de corrida (Strava, Garmin, Nike Run, etc.), extrai o km percorrido via IA, utilizando o Gemini, salva em arquivos JSON locais, disponibiliza os dados via API e gera a página estática com os rankings.
 
 ## Fluxo
 
@@ -15,10 +15,9 @@ flowchart TD
     E -->|feminino| F[data/female-mes.json]
     E -->|masculino| G[data/male-mes.json]
 
-    F --> H[npm run generate]
+    F --> H[npm run data:generate]
     G --> H
     H --> I[Lê data/*.json\n+ data/runners.json]
-    I --> J[output/results.md\nmarkdown para WhatsApp]
     I --> K[data/manifest.json\nlista de meses disponíveis]
 
     K --> L[api/src/server.ts\nExpress API]
@@ -28,7 +27,7 @@ flowchart TD
 ## Estrutura
 
 ```
-rt-ranking/
+rt-ranking-endurance/
 ├── api/                          # Servidor Express (deployado no Render)
 │   ├── src/server.ts             # 4 endpoints REST + CORS + rate limiting
 │   ├── package.json
@@ -43,21 +42,18 @@ rt-ranking/
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
 │   ├── clearImages.ts            # Limpa a pasta /images
 │   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
-│   ├── htmlGenerator.ts          # Gera output/results.md e data/manifest.json
+│   ├── dataGenerator.ts          # Gera o data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
-│   ├── manifest.json             # Meses disponíveis (gerado por npm run generate)
+│   ├── manifest.json             # Meses disponíveis (gerado por npm run data:generate)
 │   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
 ├── images/                       # Coloque aqui os screenshots dos corredores
-├── output/
-│   └── results.md                # Markdown para envio no WhatsApp
 ├── render.yaml                   # Configuração de deploy no Render.com
-├── .env                          # Variáveis de ambiente (não commitado)
-├── .env.example                  # Modelo das variáveis
+├── .env.example                  # Modelos das variáveis de ambiente
 ├── package.json
 └── tsconfig.json
 ```
@@ -88,6 +84,12 @@ cp .env.example .env
 |---|---|
 | `GEMINI_API_KEY` | Chave da API Google Gemini (obrigatória) |
 | `CURRENT_MONTH` | Sobrescreve o mês atual (opcional, ex: `4` para abril) |
+
+## Configurando o API Gemini
+
+Para usar o processamento das imagens, é preciso adicionar sua chave da API do Gemini.
+
+Para obter a chave, acesse o [https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br](https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br)
 
 ## Uso
 
@@ -120,11 +122,10 @@ Resumo:
 ### 2. Gerar rankings
 
 ```bash
-npm run generate
+npm run data:generate
 ```
 
 Gera dois arquivos:
-- `output/results.md` — markdown pronto para colar no WhatsApp
 - `data/manifest.json` — lista de meses disponíveis para o frontend
 
 ### 3. Limpar pasta "images"
