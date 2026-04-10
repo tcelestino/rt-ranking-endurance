@@ -5,6 +5,10 @@ services:
     rootDir: api
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
+    buildFilter:
+      paths:
+        - api/*.ts
+        - data/*.json
     envVars:
       - key: NODE_ENV
         value: production
