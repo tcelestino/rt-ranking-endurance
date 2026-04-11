@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 
 export function deleteImagesFiles(imageFiles: string[]) {
   console.log(`Removendo ${imageFiles.length} imagens...`);
@@ -12,7 +12,7 @@ export function getImageFiles(imagesDir: string): string[] {
     throw new Error(`Pasta "${imagesDir}" não encontrada`);
   }
 
-  const supported = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
+  const supported = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
   return fs
     .readdirSync(imagesDir)
     .filter((f) => supported.includes(path.extname(f).toLowerCase()))

@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface MonthData {
   month: number;
@@ -8,18 +8,18 @@ interface MonthData {
 }
 
 const MONTH_NAMES_PT: Record<number, string> = {
-  1: "JANEIRO",
-  2: "FEVEREIRO",
-  3: "MARÇO",
-  4: "ABRIL",
-  5: "MAIO",
-  6: "JUNHO",
-  7: "JULHO",
-  8: "AGOSTO",
-  9: "SETEMBRO",
-  10: "OUTUBRO",
-  11: "NOVEMBRO",
-  12: "DEZEMBRO",
+  1: 'JANEIRO',
+  2: 'FEVEREIRO',
+  3: 'MARÇO',
+  4: 'ABRIL',
+  5: 'MAIO',
+  6: 'JUNHO',
+  7: 'JULHO',
+  8: 'AGOSTO',
+  9: 'SETEMBRO',
+  10: 'OUTUBRO',
+  11: 'NOVEMBRO',
+  12: 'DEZEMBRO',
 };
 
 const SLUG_TO_MONTH: Record<string, number> = {
@@ -47,18 +47,16 @@ function getCurrentMonth(): number {
 }
 
 function getAvailableMonths(): { month: number; slug: string }[] {
-  const dataDir = path.resolve("data");
+  const dataDir = path.resolve('data');
   if (!fs.existsSync(dataDir)) return [];
 
-  const files = fs
-    .readdirSync(dataDir)
-    .filter((f) => /^(female|male)-.+\.json$/.test(f));
+  const files = fs.readdirSync(dataDir).filter((f) => /^(female|male)-.+\.json$/.test(f));
 
   const result: { month: number; slug: string }[] = [];
   const seen = new Set<number>();
 
   for (const file of files) {
-    const slug = file.replace(/^(female|male)-/, "").replace(/\.json$/, "");
+    const slug = file.replace(/^(female|male)-/, '').replace(/\.json$/, '');
     const month = SLUG_TO_MONTH[slug];
     if (month !== undefined && !seen.has(month)) {
       seen.add(month);
@@ -70,11 +68,7 @@ function getAvailableMonths(): { month: number; slug: string }[] {
   return result;
 }
 
-function writeManifest(
-  months: MonthData[],
-  currentMonth: number,
-  year: number,
-): void {
+function writeManifest(months: MonthData[], currentMonth: number, year: number): void {
   const manifest = {
     year,
     currentMonth,
@@ -84,12 +78,8 @@ function writeManifest(
       monthName: monthName.charAt(0) + monthName.slice(1).toLowerCase(),
     })),
   };
-  const manifestPath = path.resolve("data", "manifest.json");
-  fs.writeFileSync(
-    manifestPath,
-    JSON.stringify(manifest, null, 2) + "\n",
-    "utf-8",
-  );
+  const manifestPath = path.resolve('data', 'manifest.json');
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 }
 
 function main() {
@@ -99,7 +89,7 @@ function main() {
   const availableMonths = getAvailableMonths();
 
   if (availableMonths.length === 0) {
-    console.error("Nenhum arquivo de dados encontrado em data/");
+    console.error('Nenhum arquivo de dados encontrado em data/');
     process.exit(1);
   }
 

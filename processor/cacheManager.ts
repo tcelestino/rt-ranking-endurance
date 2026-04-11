@@ -1,6 +1,6 @@
-import * as fs from "fs";
-import * as path from "path";
-import * as crypto from "crypto";
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
 
 interface CacheEntry {
   km: number;
@@ -10,17 +10,17 @@ interface CacheEntry {
 
 type CacheFile = Record<string, CacheEntry>;
 
-const CACHE_PATH = path.resolve("data", ".image-cache.json");
+const CACHE_PATH = path.resolve('data', '.image-cache.json');
 
 export function computeHash(imagePath: string): string {
   const buffer = fs.readFileSync(imagePath);
-  return crypto.createHash("sha256").update(buffer).digest("hex");
+  return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
 function loadCache(): CacheFile {
   if (!fs.existsSync(CACHE_PATH)) return {};
   try {
-    return JSON.parse(fs.readFileSync(CACHE_PATH, "utf-8")) as CacheFile;
+    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8')) as CacheFile;
   } catch {
     return {};
   }
@@ -34,5 +34,5 @@ export function getCached(hash: string): CacheEntry | null {
 export function storeCache(hash: string, entry: CacheEntry): void {
   const cache = loadCache();
   cache[hash] = entry;
-  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2) + "\n");
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2) + '\n');
 }
