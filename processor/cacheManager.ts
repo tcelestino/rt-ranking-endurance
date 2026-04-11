@@ -10,7 +10,7 @@ interface CacheEntry {
 
 type CacheFile = Record<string, CacheEntry>;
 
-const CACHE_PATH = path.resolve('data', '.image-cache.json');
+export const CACHE_PATH = path.resolve('data', '.image-cache.json');
 
 export function computeHash(imagePath: string): string {
   const buffer = fs.readFileSync(imagePath);
@@ -35,4 +35,8 @@ export function storeCache(hash: string, entry: CacheEntry): void {
   const cache = loadCache();
   cache[hash] = entry;
   fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2) + '\n');
+}
+
+export function removeCache(): void {
+  fs.rmSync(CACHE_PATH, { force: true });
 }
