@@ -17,7 +17,7 @@ flowchart TD
 
     F --> H[npm run generate:manifest]
     G --> H
-    H --> I[Lê data/*.json\n+ data/runners.json]
+    H --> I[Lê data/*.json]
     I --> K[data/manifest.json\nlista de meses disponíveis]
 
     K --> L[api/src/server.ts\nExpress API]
