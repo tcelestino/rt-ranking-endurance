@@ -4,8 +4,9 @@
   "description": "Automação de atualização de rankings de corrida",
   "scripts": {
     "update": "tsx processor/index.ts",
-    "data:generate": "tsx processor/dataGenerator.ts",
+    "generate:manifest": "tsx processor/manifest.ts",
     "clear:images": "tsx processor/clearImages.ts",
+    "clear:cache": "tsx processor/clearCache.ts",
     "build": "tsc",
     "api:dev": "cd api && npm run dev",
     "api:build": "cd api && npm run build",

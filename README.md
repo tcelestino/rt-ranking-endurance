@@ -15,9 +15,9 @@ flowchart TD
     E -->|feminino| F[data/female-mes.json]
     E -->|masculino| G[data/male-mes.json]
 
-    F --> H[npm run data:generate]
+    F --> H[npm run generate:manifest]
     G --> H
-    H --> I[Lê data/*.json\n+ data/runners.json]
+    H --> I[Lê data/*.json]
     I --> K[data/manifest.json\nlista de meses disponíveis]
 
     K --> L[api/src/server.ts\nExpress API]
@@ -41,14 +41,15 @@ rt-ranking-endurance/
 │   ├── index.ts                  # CLI principal — processa imagens e salva JSONs
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
 │   ├── clearImages.ts            # Limpa a pasta /images
+│   ├── clearCache.ts             # Limpa o cache das imagens data/.image-cache.json
 │   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
-│   ├── dataGenerator.ts          # Gera o data/manifest.json
+│   ├── manifest.ts               # Gera o data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
-│   ├── manifest.json             # Meses disponíveis (gerado por npm run data:generate)
+│   ├── manifest.json             # Meses disponíveis (gerado por npm run generate:manifest)
 │   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
 ├── images/                       # Coloque aqui os screenshots dos corredores
@@ -119,13 +120,13 @@ Resumo:
   tiago.png → Tiago (male) → 23.06km
 ```
 
-### 2. Gerar rankings
+### 2. Gerar manifest.json
 
 ```bash
-npm run data:generate
+npm run generate:manifest
 ```
 
-Gera dois arquivos:
+Gera o arquivo:
 - `data/manifest.json` — lista de meses disponíveis para o frontend
 
 ### 3. Limpar pasta "images"
@@ -136,7 +137,16 @@ npm run clear:images
 
 Remove todas imagens existentes na pasta `/images`
 
-### 4. Visualizar rankings no browser (desenvolvimento local)
+
+### 4. Limpar cache das imagens
+
+```bash
+npm run clear:cache
+```
+
+Limpa o cache das imagens já enviadas para análise no Gemini
+
+### 5. Visualizar rankings no browser (desenvolvimento local)
 
 Terminal 1 — inicia a API:
 
