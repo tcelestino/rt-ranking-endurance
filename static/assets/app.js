@@ -7,6 +7,8 @@ const RANKING_ONLINE_URL = "https://rt-ranking-endurance.onrender.com";
 let activeMonth = null;
 let state = { months: [], annual: [], year: null };
 
+const $btnToggleTheme = document.getElementById("theme-toggle");
+
 function medal(pos) {
   if (pos === 1) return "🥇";
   if (pos === 2) return "🥈";
@@ -269,7 +271,48 @@ function showToast() {
   }, 2000);
 }
 
+function getEffectiveTheme() {
+  const stored = window.localStorage.getItem("theme");
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.setAttribute("data-theme", "dark");
+  } else {
+    root.setAttribute("data-theme", "light");
+  }
+
+  if ($btnToggleTheme)
+    $btnToggleTheme.textContent = theme === "dark" ? "☀️" : "🌕";
+}
+
+function toggleTheme() {
+  const current = getEffectiveTheme();
+  const next = current === "dark" ? "light" : "dark";
+  window.localStorage.setItem("theme", next);
+  applyTheme(next);
+}
+
 (function init() {
+  applyTheme(getEffectiveTheme());
+
+  if ($btnToggleTheme) {
+    $btnToggleTheme.addEventListener("click", toggleTheme);
+  }
+
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", () => {
+      if (!window.localStorage.getItem("theme")) {
+        applyTheme(getEffectiveTheme());
+      }
+    });
+
   if (window.localStorage.getItem("whatsappEnabled") === null) {
     window.localStorage.setItem("whatsappEnabled", "false");
   }
