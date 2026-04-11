@@ -23,26 +23,27 @@ function formatKm(km) {
 function calcRanking(participants, data) {
   return participants
     .map((name) => {
-      const rec = data.find((d) => d.name.toLowerCase() === name.toLowerCase());
+      const searchName = name.toLowerCase();
+      const rec = data.find((d) => d.name.toLowerCase() === searchName);
       const km = rec ? rec.km.reduce((a, b) => a + b, 0) : 0;
       return { name: name, km: km };
     })
     .sort((a, b) => b.km - a.km)
-    .map((r, i) => Object.assign({}, r, { position: i + 1 }));
+    .map((r, i) => ({ ...r, position: i + 1 }));
 }
 
 function calcAnnualRanking(allMonthsData, runners) {
   const totals = {};
 
   allMonthsData.forEach((monthData) => {
-    [].concat(monthData.female, monthData.male).forEach((record) => {
+    [...monthData.female, ...monthData.male].forEach((record) => {
       const key = record.name.toLowerCase();
       const sum = record.km.reduce((a, b) => a + b, 0);
       totals[key] = (totals[key] || 0) + sum;
     });
   });
 
-  const allNames = [].concat(runners.female, runners.male);
+  const allNames = [...runners.female, ...runners.male];
   const nameMap = {};
   allNames.forEach((n) => {
     nameMap[n.toLowerCase()] = n;
@@ -55,7 +56,7 @@ function calcAnnualRanking(allMonthsData, runners) {
   return Object.keys(totals)
     .map((key) => ({ name: nameMap[key] || key, km: totals[key] }))
     .sort((a, b) => b.km - a.km)
-    .map((r, i) => Object.assign({}, r, { position: i + 1 }));
+    .map((r, i) => ({ ...r, position: i + 1 }));
 }
 
 function renderRows(runners) {
@@ -305,7 +306,7 @@ function toggleTheme() {
     fetch(API_BASE + "/api/manifest").then((r) => r.json()),
     fetch(API_BASE + "/api/runners").then((r) => r.json()),
   ])
-    .then(async (results) => {
+    .then((results) => {
       const manifest = results[0];
       const runners = results[1];
 
