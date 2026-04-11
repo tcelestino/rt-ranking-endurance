@@ -181,4 +181,4 @@ O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em de
 - O nome do arquivo define o nome do corredor (ex: `tiago.png` → `Tiago`)
 - O corredor deve estar cadastrado em `data/runners.json` para ser reconhecido
 - O cache em `data/.image-cache.json` evita reprocessar a mesma imagem
-- `.env` e o `credentials.json` estão no `.gitignore` e nunca devem ser commitados
+- `.env` está no  `.gitignore` e nunca deve ser commitado
