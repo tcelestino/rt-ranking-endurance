@@ -22,63 +22,46 @@ function formatKm(km) {
 
 function calcRanking(participants, data) {
   return participants
-    .map(function (name) {
-      const rec = data.find(function (d) {
-        return d.name.toLowerCase() === name.toLowerCase();
-      });
-      const km = rec
-        ? rec.km.reduce(function (a, b) {
-            return a + b;
-          }, 0)
-        : 0;
+    .map((name) => {
+      const searchName = name.toLowerCase();
+      const rec = data.find((d) => d.name.toLowerCase() === searchName);
+      const km = rec ? rec.km.reduce((a, b) => a + b, 0) : 0;
       return { name: name, km: km };
     })
-    .sort(function (a, b) {
-      return b.km - a.km;
-    })
-    .map(function (r, i) {
-      return Object.assign({}, r, { position: i + 1 });
-    });
+    .sort((a, b) => b.km - a.km)
+    .map((r, i) => ({ ...r, position: i + 1 }));
 }
 
 function calcAnnualRanking(allMonthsData, runners) {
   const totals = {};
 
-  allMonthsData.forEach(function (monthData) {
-    [].concat(monthData.female, monthData.male).forEach(function (record) {
+  allMonthsData.forEach((monthData) => {
+    [...monthData.female, ...monthData.male].forEach((record) => {
       const key = record.name.toLowerCase();
-      const sum = record.km.reduce(function (a, b) {
-        return a + b;
-      }, 0);
+      const sum = record.km.reduce((a, b) => a + b, 0);
       totals[key] = (totals[key] || 0) + sum;
     });
   });
 
-  const allNames = [].concat(runners.female, runners.male);
+  const allNames = [...runners.female, ...runners.male];
   const nameMap = {};
-  allNames.forEach(function (n) {
+  allNames.forEach((n) => {
     nameMap[n.toLowerCase()] = n;
   });
-  allNames.forEach(function (n) {
+  allNames.forEach((n) => {
     const key = n.toLowerCase();
     if (!(key in totals)) totals[key] = 0;
   });
 
   return Object.keys(totals)
-    .map(function (key) {
-      return { name: nameMap[key] || key, km: totals[key] };
-    })
-    .sort(function (a, b) {
-      return b.km - a.km;
-    })
-    .map(function (r, i) {
-      return Object.assign({}, r, { position: i + 1 });
-    });
+    .map((key) => ({ name: nameMap[key] || key, km: totals[key] }))
+    .sort((a, b) => b.km - a.km)
+    .map((r, i) => ({ ...r, position: i + 1 }));
 }
 
 function renderRows(runners) {
   return runners
-    .map(function (r) {
+    .map((r) => {
       const m = medal(r.position);
       const medalHtml = m ? '<span class="medal">' + m + "</span>" : "";
       const kmHtml =
@@ -114,7 +97,7 @@ function renderUI() {
 
   // Tabs
   $tabsEl.innerHTML = state.months
-    .map(function (m) {
+    .map((m) => {
       const active = m.month === activeMonth ? " active" : "";
       return (
         '<button class="tab' +
@@ -132,7 +115,7 @@ function renderUI() {
 
   // Month contents
   $contentsEl.innerHTML = state.months
-    .map(function (m) {
+    .map((m) => {
       const active = m.month === activeMonth ? " active" : "";
       return (
         '<div id="content-' +
@@ -167,9 +150,7 @@ function renderUI() {
 }
 
 function updateTitle() {
-  const m = state.months.find(function (m) {
-    return m.month === activeMonth;
-  });
+  const m = state.months.find((m) => m.month === activeMonth);
   const monthName = m ? m.monthName : "";
   document.getElementById("title").innerHTML =
     "R&T Clube de Corrida - Ranking Endurance<br>" +
@@ -180,10 +161,10 @@ function updateTitle() {
 
 function switchTab(month) {
   activeMonth = month;
-  document.querySelectorAll(".month-content").forEach(function (el) {
+  document.querySelectorAll(".month-content").forEach((el) => {
     el.classList.remove("active");
   });
-  document.querySelectorAll(".tab").forEach(function (el) {
+  document.querySelectorAll(".tab").forEach((el) => {
     el.classList.remove("active");
   });
   const content = document.getElementById("content-" + month);
@@ -195,9 +176,9 @@ function switchTab(month) {
 
 function buildMonthMarkdown(m) {
   const monthUpper = m.monthName.toUpperCase();
-  const section = function (runners) {
+  const section = (runners) => {
     return runners
-      .map(function (r) {
+      .map((r) => {
         return (
           r.position +
           ". " +
@@ -223,7 +204,7 @@ function buildMonthMarkdown(m) {
 
 function buildAnnualMarkdown() {
   const section = state.annual
-    .map(function (r) {
+    .map((r) => {
       return (
         r.position + ". " + medal(r.position) + r.name + " - " + formatKm(r.km)
       );
@@ -244,15 +225,13 @@ function showCopyButton() {
 }
 
 function copyToWhatsApp() {
-  const m = state.months.find(function (m) {
-    return m.month === activeMonth;
-  });
+  const m = state.months.find((m) => m.month === activeMonth);
   if (!m) return;
   const text = buildMonthMarkdown(m) + buildAnnualMarkdown();
   navigator.clipboard
     .writeText(text)
     .then(showToast)
-    .catch(function () {
+    .catch(() => {
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
@@ -266,7 +245,7 @@ function copyToWhatsApp() {
 function showToast() {
   const toast = document.getElementById("toast");
   toast.classList.add("show");
-  setTimeout(function () {
+  setTimeout(() => {
     toast.classList.remove("show");
   }, 2000);
 }
@@ -317,62 +296,54 @@ function toggleTheme() {
     window.localStorage.setItem("whatsappEnabled", "false");
   }
   showCopyButton();
-  window.addEventListener("storage", function (event) {
+  window.addEventListener("storage", (event) => {
     if (event.key === "whatsappEnabled") {
       showCopyButton();
     }
   });
+
   Promise.all([
-    fetch(API_BASE + "/api/manifest").then(function (r) {
-      return r.json();
-    }),
-    fetch(API_BASE + "/api/runners").then(function (r) {
-      return r.json();
-    }),
+    fetch(API_BASE + "/api/manifest").then((r) => r.json()),
+    fetch(API_BASE + "/api/runners").then((r) => r.json()),
   ])
-    .then(function (results) {
+    .then((results) => {
       const manifest = results[0];
       const runners = results[1];
 
       state.year = manifest.year;
       activeMonth = manifest.currentMonth;
 
-      const hasCurrentMonth = manifest.months.some(function (m) {
-        return m.month === activeMonth;
-      });
+      const hasCurrentMonth = manifest.months.some(
+        (m) => m.month === activeMonth,
+      );
       if (!hasCurrentMonth && manifest.months.length > 0) {
         activeMonth = manifest.months[manifest.months.length - 1].month;
       }
 
       return Promise.all(
-        manifest.months.map(function (m) {
-          return Promise.all([
+        manifest.months.map(async (m) => {
+          const data = await Promise.all([
             fetch(API_BASE + "/api/data/" + m.slug + "/female")
-              .then(function (r) {
-                return r.json();
-              })
-              .catch(function () {
+              .then((r) => r.json())
+              .catch(() => {
                 return [];
               }),
             fetch(API_BASE + "/api/data/" + m.slug + "/male")
-              .then(function (r) {
-                return r.json();
-              })
-              .catch(function () {
+              .then((r) => r.json())
+              .catch(() => {
                 return [];
               }),
-          ]).then(function (data) {
-            return {
-              month: m.month,
-              slug: m.slug,
-              monthName: m.monthName,
-              femaleRaw: data[0],
-              maleRaw: data[1],
-            };
-          });
+          ]);
+          return {
+            month: m.month,
+            slug: m.slug,
+            monthName: m.monthName,
+            femaleRaw: data[0],
+            maleRaw: data[1],
+          };
         }),
-      ).then(function (monthsRaw) {
-        state.months = monthsRaw.map(function (m) {
+      ).then((monthsRaw) => {
+        state.months = monthsRaw.map((m) => {
           return {
             month: m.month,
             slug: m.slug,
@@ -384,7 +355,7 @@ function toggleTheme() {
           };
         });
 
-        const allRaw = monthsRaw.map(function (m) {
+        const allRaw = monthsRaw.map((m) => {
           return { female: m.femaleRaw, male: m.maleRaw };
         });
         state.annual = calcAnnualRanking(allRaw, runners);
@@ -392,7 +363,7 @@ function toggleTheme() {
         renderUI();
       });
     })
-    .catch(function (err) {
+    .catch((err) => {
       document.getElementById("loading").textContent =
         "Erro ao carregar dados: " + err.message;
     });
