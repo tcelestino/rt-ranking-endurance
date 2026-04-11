@@ -7,6 +7,8 @@ const RANKING_ONLINE_URL = "https://rt-ranking-endurance.onrender.com";
 let activeMonth = null;
 let state = { months: [], annual: [], year: null };
 
+const $btnToggleTheme = document.getElementById("theme-toggle");
+
 function medal(pos) {
   if (pos === 1) return "🥇";
   if (pos === 2) return "🥈";
@@ -284,8 +286,9 @@ function applyTheme(theme) {
   } else {
     root.setAttribute("data-theme", "light");
   }
-  const $btn = document.getElementById("theme-toggle");
-  if ($btn) $btn.textContent = theme === "dark" ? "☀️" : "🌕";
+
+  if ($btnToggleTheme)
+    $btnToggleTheme.textContent = theme === "dark" ? "☀️" : "🌕";
 }
 
 function toggleTheme() {
@@ -297,9 +300,10 @@ function toggleTheme() {
 
 (function init() {
   applyTheme(getEffectiveTheme());
-  document
-    .getElementById("theme-toggle")
-    .addEventListener("click", toggleTheme);
+
+  if ($btnToggleTheme) {
+    $btnToggleTheme.addEventListener("click", toggleTheme);
+  }
 
   window
     .matchMedia("(prefers-color-scheme: dark)")
