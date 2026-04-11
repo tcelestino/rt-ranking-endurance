@@ -41,6 +41,7 @@ rt-ranking-endurance/
 │   ├── index.ts                  # CLI principal — processa imagens e salva JSONs
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
 │   ├── clearImages.ts            # Limpa a pasta /images
+│   ├── clearCache.ts             # Limpa o cache das imagens data/.image-cache.json
 │   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
 │   ├── manifest.ts               # Gera o data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
@@ -136,7 +137,16 @@ npm run clear:images
 
 Remove todas imagens existentes na pasta `/images`
 
-### 4. Visualizar rankings no browser (desenvolvimento local)
+
+### 4. Limpar cache das imagens
+
+```bash
+npm run clear:cache
+```
+
+Limpa o cache das imagens já enviadas para análise no Gemini
+
+### 5. Visualizar rankings no browser (desenvolvimento local)
 
 Terminal 1 — inicia a API:
 
