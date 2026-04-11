@@ -1,15 +1,10 @@
-import * as path from "path";
-import "dotenv/config";
-import { extractKmFromImage } from "./imageAnalyzerGemini";
-import { loadParticipants, findGender } from "./participantsParser";
-import {
-  loadMonthData,
-  appendKm,
-  saveMonthData,
-  getDataFilePath,
-} from "./jsonUpdater";
-import { computeHash, getCached, storeCache } from "./cacheManager";
-import { getImageFiles } from "./imageFiles";
+import * as path from 'path';
+import 'dotenv/config';
+import { extractKmFromImage } from './imageAnalyzerGemini';
+import { loadParticipants, findGender } from './participantsParser';
+import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
+import { computeHash, getCached, storeCache } from './cacheManager';
+import { getImageFiles } from './imageFiles';
 
 function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -28,11 +23,11 @@ async function main() {
   const participants = loadParticipants();
   const month = getCurrentMonth();
 
-  const imagesDir = path.resolve("images");
+  const imagesDir = path.resolve('images');
   const imageFiles = getImageFiles(imagesDir);
 
   if (imageFiles.length === 0) {
-    console.log("Nenhuma imagem encontrada em images/");
+    console.log('Nenhuma imagem encontrada em images/');
     return;
   }
 
@@ -50,9 +45,7 @@ async function main() {
 
     const gender = findGender(participants, runnerName);
     if (!gender) {
-      console.warn(
-        `  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`,
-      );
+      console.warn(`  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`);
       continue;
     }
 
@@ -65,9 +58,7 @@ async function main() {
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(
-          ` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`,
-        );
+        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
       } else {
         km = await extractKmFromImage(imagePath);
         process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);
@@ -82,24 +73,20 @@ async function main() {
       results.push({ file: filename, runner: runnerName, km, gender });
     } catch (err) {
       console.log(` ✗`);
-      console.error(
-        `  Erro ao processar ${filename}: ${err instanceof Error ? err.message : err}`,
-      );
+      console.error(`  Erro ao processar ${filename}: ${err instanceof Error ? err.message : err}`);
       throw err;
     }
   }
 
   if (results.length > 0) {
-    console.log("\nResumo:");
+    console.log('\nResumo:');
     for (const r of results) {
-      console.log(
-        `  ${r.file} → ${r.runner} (${r.gender}) → ${r.km.toFixed(2)}km`,
-      );
+      console.log(`  ${r.file} → ${r.runner} (${r.gender}) → ${r.km.toFixed(2)}km`);
     }
   }
 }
 
 main().catch((err) => {
-  console.error("Erro fatal:", err instanceof Error ? err.message : err);
+  console.error('Erro fatal:', err instanceof Error ? err.message : err);
   process.exit(1);
 });
