@@ -15,7 +15,7 @@ flowchart TD
     E -->|feminino| F[data/female-mes.json]
     E -->|masculino| G[data/male-mes.json]
 
-    F --> H[npm run data:generate]
+    F --> H[npm run generate:manifest]
     G --> H
     H --> I[Lê data/*.json\n+ data/runners.json]
     I --> K[data/manifest.json\nlista de meses disponíveis]
@@ -42,13 +42,13 @@ rt-ranking-endurance/
 │   ├── imageAnalyzerGemini.ts    # Gemini Vision: extrai km da imagem
 │   ├── clearImages.ts            # Limpa a pasta /images
 │   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
-│   ├── dataGenerator.ts          # Gera o data/manifest.json
+│   ├── manifest.ts               # Gera o data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
-│   ├── manifest.json             # Meses disponíveis (gerado por npm run data:generate)
+│   ├── manifest.json             # Meses disponíveis (gerado por npm run generate:manifest)
 │   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
 ├── images/                       # Coloque aqui os screenshots dos corredores
@@ -119,13 +119,13 @@ Resumo:
   tiago.png → Tiago (male) → 23.06km
 ```
 
-### 2. Gerar rankings
+### 2. Gerar manifest.json
 
 ```bash
-npm run data:generate
+npm run generate:manifest
 ```
 
-Gera dois arquivos:
+Gera o arquivo:
 - `data/manifest.json` — lista de meses disponíveis para o frontend
 
 ### 3. Limpar pasta "images"
