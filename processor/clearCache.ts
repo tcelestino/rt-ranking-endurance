@@ -1,15 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs';
-
-const CACHE_PATH = path.resolve('data', '.image-cache.json');
+import { CACHE_PATH, removeCache } from './cacheManager';
 
 function main() {
   if (!fs.existsSync(CACHE_PATH)) {
     console.log('Arquivo de cache não encontrado. Nada a limpar.');
     return;
   }
-
-  fs.writeFileSync(CACHE_PATH, '{}\n');
+  console.log('Iniciando limpeza do cache...');
+  removeCache();
   console.log('Cache limpo com sucesso.');
 }
 
