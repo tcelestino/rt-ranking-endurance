@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run update       # processa imagens em images/ e salva km nos JSONs
-npm run data:generate # lê data/*.json e gera data/manifest.json
+npm run generate:manifest # lê data/*.json e gera data/manifest.json
 npm run clear:images # remove todos os arquivos de imagem da pasta images/
 npm run serve        # sobe servidor estático da pasta static/ na porta 3000
 npm run build        # compila TypeScript (processor/) para dist/
@@ -15,7 +15,7 @@ npm run api:build    # compila a API para api/dist/
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
-Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run data:generate`.
+Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run generate:manifest`.
 
 ## Estrutura
 
@@ -37,7 +37,7 @@ rt-ranking-endurance/
 │   ├── participantsParser.ts
 │   ├── imageFiles.ts
 │   ├── cacheManager.ts
-│   ├── dataGenerator.ts
+│   ├── manifest.ts
 │   └── clearImages.ts
 ├── data/                       # JSONs commitados — lidos por api/ e escritos por processor/
 ├── images/                     # gitignored — input local
@@ -67,9 +67,9 @@ O projeto tem três partes independentes:
 
 **`processor/cacheManager.ts`** — cache de imagens por hash SHA256 em `data/.image-cache.json`. Imagem já processada (mesmo hash) é ignorada em execuções futuras, independente da data.
 
-### Fluxo 2 — `npm run data:generate` (geração do manifest)
+### Fluxo 2 — `npm run generate:manifest` (geração do manifest)
 
-**`processor/dataGenerator.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
+**`processor/manifest.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
 - `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
 
 ### API — `api/src/server.ts`
@@ -113,6 +113,51 @@ Página estática deployada no Render. Carrega dados via `fetch()` para a API (`
 
 Devem estar no `.gitignore`.
 
+## Fluxo de atualização do manifest.json com Deploy
+
+Esse fluxo será executado caso durante uma nova atualização esteja acontecendo no primeiro dia do mês. Assim, você vai executar as seguintes etapas antes de rodar o `npm run update`
+
+### 1. Sincronizar branch local
+
+Execute o comando:
+```bash
+git checkout main && git pull origin main
+```
+
+### 2. Limpar cache
+
+Execute o comando:
+```bash
+npm run clean:cache
+```
+
+### 3. Atualizar manifest.json
+```bash
+npm run generate:manifest || { echo "Falha ao gerar manifest.json. Abortando."; exit 1; }
+```
+
+### 4. Criar branch
+```bash
+git checkout -b update-manifest-$(date +%m)-$(date +%Y)
+```
+
+### 5. Commit e push
+```bash
+git add data/
+git commit -m "chore: atualização do manifest $(date +%m/%Y)"
+git push origin HEAD
+```
+
+### 6. Criar Pull Request e fazer merge
+```bash
+gh pr create --title "chore: atualização manifest.json" --body "Atualização do manifest.json para o mês $(date +%m/%Y)" --base main
+gh pr merge --squash --delete-branch
+```
+
+O `--squash` mantêm o histórico da `main` limpo, consolidando os commits da branch em um único commit.
+
+Após o merge, dê a sequência para o fluxo de update e deploy dos dados.
+
 ## Fluxo de Update e Deploy
 
 Quando solicitado a executar o "processo de update", siga exatamente estas etapas:
@@ -151,6 +196,9 @@ Após ser feito o merge do pull request, faça a limpeza da pasta `images` execu
 ```bash
 npm run clear:images
 ```
+
+Nunca execute o comando `npm run generate:manifest` nesse processo.
+
 
 ## Observações
 
