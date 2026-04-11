@@ -62,10 +62,7 @@ body {
   background: var(--bg);
   color: var(--color-text);
   min-height: 100vh;
-  padding: 1.5rem 1rem 5rem;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  padding: 1.5rem 1rem 0;
 }
 
 .container {
