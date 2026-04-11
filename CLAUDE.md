@@ -110,9 +110,47 @@ Página estática deployada no Render. Carrega dados via `fetch()` para a API (`
 ## Arquivos sensíveis
 
 - `.env` — variáveis de ambiente com API keys (`GEMINI_API_KEY`) (nunca commitar)
-- `credentials.json` - contêm as configurações do Google API (nunca commitar)
 
 Devem estar no `.gitignore`.
+
+## Fluxo de Update e Deploy
+
+Quando solicitado a executar o "processo de update", siga exatamente estas etapas:
+
+### 1. Processar imagens
+```bash
+npm run update
+```
+
+### 2. Criar branch
+```bash
+git checkout -b update-$(date +%d)-$(date +%m)-$(date +%Y)
+```
+
+### 3. Commit e push
+```bash
+git add data/
+git commit -m "update: dados $(date +%d/%m/%Y)"
+git push origin HEAD
+```
+
+### 4. Criar Pull Request
+```bash
+gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
+```
+
+### 5. Confirmação antes do merge
+Capture o numero do PR criado no passo anterior. Informe o numero e URL ao usuário e aguarde confirmação explicita do usuário. Somente apos "pode fazer o merge", "confirmo" ou similar, execute:
+```bash
+gh pr merge <numero> --squash --delete-branch
+```
+
+### 6. Limpar pasta images
+Após ser feito o merge do pull request, faça a limpeza da pasta `images` executando o comando:
+
+```bash
+npm run clear:images
+```
 
 ## Observações
 
