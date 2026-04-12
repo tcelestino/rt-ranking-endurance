@@ -101,13 +101,23 @@ function renderTotalMonth(runners) {
   return renderTotal(total);
 }
 
-function renderWinnerHighlight(runner) {
-  if (!runner) return '';
+function renderMonthWinnerCard(female, male) {
+  const f = female[0];
+  const m = male[0];
+  if (!f || !m) return '';
   return (
-    '<div class="winner-highlight">' +
-    '<span class="winner-highlight-icon">🎉</span>' +
-    '<span class="name">' + runner.name + '</span>' +
-    '<span class="km">' + formatKm(runner.km) + '</span>' +
+    '<div class="section winner-card">' +
+    '<div class="section-header">🎉 Vencedores do Mês</div>' +
+    '<div class="winner-row">' +
+    '<span class="winner-label">Feminino</span>' +
+    '<span class="name">' + f.name + '</span>' +
+    '<span class="km">' + formatKm(f.km) + '</span>' +
+    '</div>' +
+    '<div class="winner-row">' +
+    '<span class="winner-label">Masculino</span>' +
+    '<span class="name">' + m.name + '</span>' +
+    '<span class="km">' + formatKm(m.km) + '</span>' +
+    '</div>' +
     '</div>'
   );
 }
@@ -174,9 +184,9 @@ function renderUI() {
         '" class="month-content' +
         active +
         '">' +
+        (shouldShowWinners(m.month) ? renderMonthWinnerCard(m.female, m.male) : '') +
         '<div class="section">' +
         '<div class="section-header">🏃‍♀️ Feminino</div>' +
-        (shouldShowWinners(m.month) ? renderWinnerHighlight(m.female[0]) : '') +
         '<ul class="runner-list">' +
         renderRows(m.female) +
         '</ul>' +
@@ -184,7 +194,6 @@ function renderUI() {
         '</div>' +
         '<div class="section">' +
         '<div class="section-header">🏃‍♂️ Masculino</div>' +
-        (shouldShowWinners(m.month) ? renderWinnerHighlight(m.male[0]) : '') +
         '<ul class="runner-list">' +
         renderRows(m.male) +
         '</ul>' +
