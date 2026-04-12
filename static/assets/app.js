@@ -16,6 +16,12 @@ function medal(pos) {
   return '';
 }
 
+function isLastDayOfCurrentMonth() {
+  const today = new Date();
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  return today.getDate() === lastDay;
+}
+
 function formatKm(km) {
   return km === 0 ? '0km' : km.toFixed(2) + 'km';
 }
@@ -86,6 +92,29 @@ function renderTotal(total) {
 function renderTotalMonth(runners) {
   const total = runners.reduce((sum, r) => sum + r.km, 0);
   return renderTotal(total);
+}
+
+function renderMonthWinners(female, male) {
+  const f = female[0];
+  const m = male[0];
+  if (!f || !m) return '';
+  return (
+    '<div class="section">' +
+    '<div class="section-header">🏆 Vencedores do Mês</div>' +
+    '<div class="winner-row">' +
+    '<span class="winner-gender">🏃‍♀️</span>' +
+    '<span class="medal">🥇</span>' +
+    '<span class="name">' + f.name + '</span>' +
+    '<span class="km">' + formatKm(f.km) + '</span>' +
+    '</div>' +
+    '<div class="winner-row">' +
+    '<span class="winner-gender">🏃‍♂️</span>' +
+    '<span class="medal">🥇</span>' +
+    '<span class="name">' + m.name + '</span>' +
+    '<span class="km">' + formatKm(m.km) + '</span>' +
+    '</div>' +
+    '</div>'
+  );
 }
 
 function renderRows(runners) {
@@ -164,6 +193,7 @@ function renderUI() {
         '</ul>' +
         renderTotalMonth(m.male) +
         '</div>' +
+        (isLastDayOfCurrentMonth() ? renderMonthWinners(m.female, m.male) : '') +
         '</div>'
       );
     })

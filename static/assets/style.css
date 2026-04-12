@@ -291,6 +291,23 @@ h1 {
   display: block;
 }
 
+.winner-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.winner-row:last-child {
+  border-bottom: none;
+}
+
+.winner-gender {
+  font-size: 1rem;
+  min-width: 1.4rem;
+}
+
 @media (min-width: 768px) {
   .container {
     max-width: 960px;
