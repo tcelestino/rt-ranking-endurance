@@ -183,18 +183,13 @@ git commit -m "update: dados $(date +%d/%m/%Y)"
 git push origin HEAD
 ```
 
-### 4. Criar Pull Request
+### 4. Criar Pull Request e fazer merge
 ```bash
 gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
-```
-
-### 5. Confirmação antes do merge
-Capture o numero do PR criado no passo anterior. Informe o numero e URL ao usuário e aguarde confirmação explicita do usuário. Somente apos "pode fazer o merge", "confirmo" ou similar, execute:
-```bash
 gh pr merge <numero> --squash --delete-branch
 ```
 
-### 6. Limpar pasta images
+### 5. Limpar pasta images
 Após ser feito o merge do pull request, faça a limpeza da pasta `images` executando o comando:
 
 ```bash
