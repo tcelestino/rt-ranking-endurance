@@ -317,6 +317,7 @@ h1 {
     display: flex;
     gap: 1rem;
     align-items: stretch;
+    flex-wrap: wrap;
     margin-bottom: 1.5rem;
   }
 
@@ -329,5 +330,11 @@ h1 {
 
   .month-content.active .section .runner-list {
     flex: 1;
+  }
+
+  .month-content.active .winner-section {
+    flex: none;
+    width: 100%;
+    margin-top: 0;
   }
 }

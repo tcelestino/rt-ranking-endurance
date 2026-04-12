@@ -99,7 +99,7 @@ function renderMonthWinners(female, male) {
   const m = male[0];
   if (!f || !m) return '';
   return (
-    '<div class="section">' +
+    '<div class="section winner-section">' +
     '<div class="section-header">🏆 Vencedores do Mês</div>' +
     '<div class="winner-row">' +
     '<span class="winner-gender">🏃‍♀️</span>' +
