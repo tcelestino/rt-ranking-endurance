@@ -74,7 +74,7 @@ function calcTotal(allMonthsData) {
 
 function renderTotal(total) {
   return (
-    '<div class="section total">' +
+    '<div class="total">' +
     '<span class="total-label">Total:</span>' +
     '<span class="total-value km">' +
     formatKm(total) +
@@ -155,15 +155,15 @@ function renderUI() {
         '<ul class="runner-list">' +
         renderRows(m.female) +
         '</ul>' +
-        '</div>' +
         renderTotalMonth(m.female) +
+        '</div>' +
         '<div class="section">' +
         '<div class="section-header">🏃‍♂️ Masculino</div>' +
         '<ul class="runner-list">' +
         renderRows(m.male) +
         '</ul>' +
-        '</div>' +
         renderTotalMonth(m.male) +
+        '</div>' +
         '</div>'
       );
     })

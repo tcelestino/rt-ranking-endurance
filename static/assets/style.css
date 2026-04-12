@@ -10,6 +10,7 @@
   --color-tab: #555555;
   --color-tab-active: #ffffff;
   --color-km: #004b00;
+  --color-total: #b45309;
   --color-zero: #aaaaaa;
   --color-border: #e0e0e0;
   --color-title: #111111;
@@ -27,6 +28,7 @@
   --color-tab: #888888;
   --color-tab-active: #0f0f0f;
   --color-km: #6ee7b7;
+  --color-total: #fcd34d;
   --color-zero: #555555;
   --color-border: #222222;
   --color-title: #ffffff;
@@ -45,6 +47,7 @@
     --color-tab: #888888;
     --color-tab-active: #0f0f0f;
     --color-km: #6ee7b7;
+    --color-total: #fcd34d;
     --color-zero: #555555;
     --color-border: #222222;
     --color-title: #ffffff;
@@ -274,7 +277,11 @@ h1 {
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 1rem;
-  margin-bottom: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.total-value {
+  color: var(--color-total);
 }
 
 #annual-section {
@@ -282,4 +289,28 @@ h1 {
 }
 #annual-section.show {
   display: block;
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 960px;
+  }
+
+  .month-content.active {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    margin-bottom: 1.5rem;
+  }
+
+  .month-content.active .section {
+    flex: 1;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .month-content.active .section .runner-list {
+    flex: 1;
+  }
 }
