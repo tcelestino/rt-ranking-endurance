@@ -22,6 +22,13 @@ function isLastDayOfCurrentMonth() {
   return today.getDate() === lastDay;
 }
 
+function shouldShowWinners(monthNum) {
+  const currentMonth = new Date().getMonth() + 1;
+  if (monthNum < currentMonth) return true;
+  if (monthNum === currentMonth) return isLastDayOfCurrentMonth();
+  return false;
+}
+
 function formatKm(km) {
   return km === 0 ? '0km' : km.toFixed(2) + 'km';
 }
@@ -104,14 +111,22 @@ function renderMonthWinners(female, male) {
     '<div class="winner-row">' +
     '<span class="winner-gender">🏃‍♀️</span>' +
     '<span class="medal">🥇</span>' +
-    '<span class="name">' + f.name + '</span>' +
-    '<span class="km">' + formatKm(f.km) + '</span>' +
+    '<span class="name">' +
+    f.name +
+    '</span>' +
+    '<span class="km">' +
+    formatKm(f.km) +
+    '</span>' +
     '</div>' +
     '<div class="winner-row">' +
     '<span class="winner-gender">🏃‍♂️</span>' +
     '<span class="medal">🥇</span>' +
-    '<span class="name">' + m.name + '</span>' +
-    '<span class="km">' + formatKm(m.km) + '</span>' +
+    '<span class="name">' +
+    m.name +
+    '</span>' +
+    '<span class="km">' +
+    formatKm(m.km) +
+    '</span>' +
     '</div>' +
     '</div>'
   );
@@ -193,7 +208,7 @@ function renderUI() {
         '</ul>' +
         renderTotalMonth(m.male) +
         '</div>' +
-        (isLastDayOfCurrentMonth() ? renderMonthWinners(m.female, m.male) : '') +
+        (shouldShowWinners(m.month) ? renderMonthWinners(m.female, m.male) : '') +
         '</div>'
       );
     })
