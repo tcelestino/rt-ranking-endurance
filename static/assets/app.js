@@ -85,14 +85,7 @@ function renderTotal(total) {
 
 function renderTotalMonth(runners) {
   const total = runners.reduce((sum, r) => sum + r.km, 0);
-  return (
-    '<div class="total">' +
-    '<span class="total-label">Total:</span>' +
-    '<span class="total-value km">' +
-    formatKm(total) +
-    '</span>' +
-    '</div>'
-  );
+  return renderTotal(total);
 }
 
 function renderRows(runners) {
