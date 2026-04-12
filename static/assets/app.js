@@ -5,7 +5,7 @@ const API_BASE = ['localhost', '127.0.0.1'].includes(window.location.hostname)
 const RANKING_ONLINE_URL = 'https://rt-ranking-endurance.onrender.com';
 
 let activeMonth = null;
-let state = { months: [], annual: [], year: null };
+let state = { months: [], annual: [], year: null, totalAnnual: 0 };
 
 const $btnToggleTheme = document.getElementById('theme-toggle');
 
@@ -59,6 +59,35 @@ function calcAnnualRanking(allMonthsData, runners) {
     .map((r, i) => ({ ...r, position: i + 1 }));
 }
 
+function calcTotal(allMonthsData) {
+  let total = 0;
+
+  allMonthsData.forEach((monthData) => {
+    [...monthData.female, ...monthData.male].forEach((record) => {
+      const sum = record.km.reduce((a, b) => a + b, 0);
+      total += sum;
+    });
+  });
+
+  return total;
+}
+
+function renderTotal(total) {
+  return (
+    '<div class="section total">' +
+    '<span class="total-label">Total:</span>' +
+    '<span class="total-value km">' +
+    formatKm(total) +
+    '</span>' +
+    '</div>'
+  );
+}
+
+function renderTotalMonth(runners) {
+  const total = runners.reduce((sum, r) => sum + r.km, 0);
+  return renderTotal(total);
+}
+
 function renderRows(runners) {
   return runners
     .map((r) => {
@@ -87,6 +116,7 @@ function renderUI() {
   const $tabsEl = document.getElementById('tabs');
   const $contentsEl = document.getElementById('month-contents');
   const $annualSection = document.getElementById('annual-section');
+  const $annualTotal = document.getElementById('annual-total');
   const $annualList = document.getElementById('annual-list');
   const $loading = document.getElementById('loading');
 
@@ -126,12 +156,14 @@ function renderUI() {
         renderRows(m.female) +
         '</ul>' +
         '</div>' +
+        renderTotalMonth(m.female) +
         '<div class="section">' +
         '<div class="section-header">🏃‍♂️ Masculino</div>' +
         '<ul class="runner-list">' +
         renderRows(m.male) +
         '</ul>' +
         '</div>' +
+        renderTotalMonth(m.male) +
         '</div>'
       );
     })
@@ -140,7 +172,8 @@ function renderUI() {
   // Annual
   $annualList.innerHTML = renderRows(state.annual);
   $annualSection.querySelector('.section-header').textContent = '🏆 Ranking Anual ' + state.year;
-  $annualSection.style.display = 'block';
+  $annualSection.classList.add('show');
+  $annualTotal.innerHTML = renderTotal(state.totalAnnual);
 
   updateTitle();
 }
@@ -336,6 +369,7 @@ function toggleTheme() {
           return { female: m.femaleRaw, male: m.maleRaw };
         });
         state.annual = calcAnnualRanking(allRaw, runners);
+        state.totalAnnual = calcTotal(allRaw);
 
         renderUI();
       });

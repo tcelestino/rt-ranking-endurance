@@ -3,13 +3,13 @@
   --bg-card: #ffffff;
   --bg-header: #ebebeb;
   --bg-tab: #e0e0e0;
-  --bg-tab-active: #6ee7b7;
+  --bg-tab-active: #004b00;
   --color-text: #1a1a1a;
   --color-muted: #666666;
   --color-subtle: #999999;
   --color-tab: #555555;
   --color-tab-active: #ffffff;
-  --color-km: #6ee7b7;
+  --color-km: #004b00;
   --color-zero: #aaaaaa;
   --color-border: #e0e0e0;
   --color-title: #111111;
@@ -65,6 +65,16 @@ body {
   padding: 1.5rem 1rem 0;
 }
 
+h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-title);
+  flex: 1;
+}
+
 .container {
   max-width: 480px;
   margin: 0 auto;
@@ -75,16 +85,6 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5rem;
-}
-
-h1 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-title);
-  flex: 1;
 }
 
 .theme-toggle {
@@ -151,7 +151,7 @@ h1 {
 }
 
 .section {
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
   background: var(--bg-card);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -204,7 +204,8 @@ h1 {
   min-width: 1.4rem;
 }
 
-.name {
+.name,
+.total-label {
   flex: 1;
   font-size: 0.95rem;
   color: var(--color-text);
@@ -267,4 +268,18 @@ h1 {
   color: var(--color-subtle);
   padding: 3rem 0;
   font-size: 0.9rem;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+
+#annual-section {
+  display: none;
+}
+#annual-section.show {
+  display: block;
 }
