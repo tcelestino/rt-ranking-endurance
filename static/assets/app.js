@@ -16,6 +16,27 @@ function medal(pos) {
   return '';
 }
 
+function isLastDayOfCurrentMonth() {
+  const today = new Date();
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  return today.getDate() === lastDay;
+}
+
+function shouldShowWinners(monthNum, currentMonth, isLastDay) {
+  if (monthNum < currentMonth) return true;
+  if (monthNum === currentMonth) return isLastDay;
+  return false;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function formatKm(km) {
   return km === 0 ? '0km' : km.toFixed(2) + 'km';
 }
@@ -88,6 +109,31 @@ function renderTotalMonth(runners) {
   return renderTotal(total);
 }
 
+function renderMonthWinnerCard(female, male) {
+  const f = female[0];
+  const m = male[0];
+  if (!f && !m) return '';
+  const femaleCard = f
+    ? '<div class="section">' +
+      '<div class="section-header">🎉 Vencedora do Mês</div>' +
+      '<div class="winner-row">' +
+      '<span class="name">' + escapeHtml(f.name) + '</span>' +
+      '<span class="km">' + formatKm(f.km) + '</span>' +
+      '</div>' +
+      '</div>'
+    : '';
+  const maleCard = m
+    ? '<div class="section">' +
+      '<div class="section-header">🎉 Vencedor do Mês</div>' +
+      '<div class="winner-row">' +
+      '<span class="name">' + escapeHtml(m.name) + '</span>' +
+      '<span class="km">' + formatKm(m.km) + '</span>' +
+      '</div>' +
+      '</div>'
+    : '';
+  return '<div class="winner-cards">' + femaleCard + maleCard + '</div>';
+}
+
 function renderRows(runners) {
   return runners
     .map((r) => {
@@ -103,7 +149,7 @@ function renderRows(runners) {
         '.</span>' +
         medalHtml +
         '<span class="name">' +
-        r.name +
+        escapeHtml(r.name) +
         '</span>' +
         kmHtml +
         '</li>'
@@ -141,6 +187,10 @@ function renderUI() {
     .join('');
 
   // Month contents
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const isLastDay = isLastDayOfCurrentMonth();
+
   $contentsEl.innerHTML = state.months
     .map((m) => {
       const active = m.month === activeMonth ? ' active' : '';
@@ -150,6 +200,7 @@ function renderUI() {
         '" class="month-content' +
         active +
         '">' +
+        (shouldShowWinners(m.month, currentMonth, isLastDay) ? renderMonthWinnerCard(m.female, m.male) : '') +
         '<div class="section">' +
         '<div class="section-header">🏃‍♀️ Feminino</div>' +
         '<ul class="runner-list">' +
