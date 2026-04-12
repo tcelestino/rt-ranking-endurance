@@ -291,19 +291,21 @@ h1 {
   display: block;
 }
 
-.winner-row {
+.winner-highlight {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1rem;
+  background: var(--bg-header);
   border-bottom: 1px solid var(--color-border);
 }
 
-.winner-row:last-child {
-  border-bottom: none;
+.winner-highlight .name {
+  flex: 1;
+  font-weight: 700;
 }
 
-.winner-gender {
+.winner-highlight-icon {
   font-size: 1rem;
   min-width: 1.4rem;
 }
@@ -317,7 +319,6 @@ h1 {
     display: flex;
     gap: 1rem;
     align-items: stretch;
-    flex-wrap: wrap;
     margin-bottom: 1.5rem;
   }
 
@@ -330,11 +331,5 @@ h1 {
 
   .month-content.active .section .runner-list {
     flex: 1;
-  }
-
-  .month-content.active .winner-section {
-    flex: none;
-    width: 100%;
-    margin-top: 0;
   }
 }
