@@ -116,6 +116,7 @@ function renderUI() {
   const $tabsEl = document.getElementById('tabs');
   const $contentsEl = document.getElementById('month-contents');
   const $annualSection = document.getElementById('annual-section');
+  const $annualTotal = document.getElementById('annual-total');
   const $annualList = document.getElementById('annual-list');
   const $loading = document.getElementById('loading');
 
@@ -172,7 +173,7 @@ function renderUI() {
   $annualList.innerHTML = renderRows(state.annual);
   $annualSection.querySelector('.section-header').textContent = '🏆 Ranking Anual ' + state.year;
   $annualSection.classList.add('show');
-  $annualSection.innerHTML += renderTotal(state.totalAnnual);
+  $annualTotal.innerHTML = renderTotal(state.totalAnnual);
 
   updateTitle();
 }
