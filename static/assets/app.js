@@ -106,17 +106,20 @@ function renderMonthWinnerCard(female, male) {
   const m = male[0];
   if (!f || !m) return '';
   return (
-    '<div class="section winner-card">' +
-    '<div class="section-header">🎉 Vencedores do Mês</div>' +
+    '<div class="winner-cards">' +
+    '<div class="section">' +
+    '<div class="section-header">🎉 Vencedora do Mês</div>' +
     '<div class="winner-row">' +
-    '<span class="winner-label">Feminino</span>' +
     '<span class="name">' + f.name + '</span>' +
     '<span class="km">' + formatKm(f.km) + '</span>' +
     '</div>' +
+    '</div>' +
+    '<div class="section">' +
+    '<div class="section-header">🎉 Vencedor do Mês</div>' +
     '<div class="winner-row">' +
-    '<span class="winner-label">Masculino</span>' +
     '<span class="name">' + m.name + '</span>' +
     '<span class="km">' + formatKm(m.km) + '</span>' +
+    '</div>' +
     '</div>' +
     '</div>'
   );
