@@ -43,7 +43,7 @@ export function loadMonthData(gender: 'female' | 'male', month: number): Partici
 
 export function appendKm(data: ParticipantRecord[], name: string, km: number): ParticipantRecord[] {
   const normalizedName = normalize(name);
-  const existing = data.find((p) => normalize(p.name) === normalizedName);
+  const existing = data.find((p) => p.name === name || normalize(p.name) === normalizedName);
   if (existing) {
     existing.km.push(km);
   } else {
