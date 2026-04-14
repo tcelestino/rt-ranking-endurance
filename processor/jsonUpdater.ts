@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { normalize } from './participantsParser';
 
 export interface ParticipantRecord {
   name: string;
@@ -41,7 +42,8 @@ export function loadMonthData(gender: 'female' | 'male', month: number): Partici
 }
 
 export function appendKm(data: ParticipantRecord[], name: string, km: number): ParticipantRecord[] {
-  const existing = data.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  const normalizedName = normalize(name);
+  const existing = data.find((p) => normalize(p.name) === normalizedName);
   if (existing) {
     existing.km.push(km);
   } else {
