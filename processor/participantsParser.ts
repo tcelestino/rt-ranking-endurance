@@ -12,13 +12,17 @@ export function loadParticipants(filePath?: string): Participants {
   return JSON.parse(raw) as Participants;
 }
 
-export function findGender(participants: Participants, name: string): 'female' | 'male' | null {
-  const normalized = name.toLowerCase();
+function normalize(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 
-  if (participants.female.some((n) => n.toLowerCase() === normalized)) {
+export function findGender(participants: Participants, name: string): 'female' | 'male' | null {
+  const normalized = normalize(name);
+
+  if (participants.female.some((n) => normalize(n) === normalized)) {
     return 'female';
   }
-  if (participants.male.some((n) => n.toLowerCase() === normalized)) {
+  if (participants.male.some((n) => normalize(n) === normalized)) {
     return 'male';
   }
   return null;
