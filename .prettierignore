@@ -2,3 +2,5 @@ node_modules
 _site
 dist
 images
+data/female-*.json
+data/male-*.json
