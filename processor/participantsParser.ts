@@ -12,8 +12,11 @@ export function loadParticipants(filePath?: string): Participants {
   return JSON.parse(raw) as Participants;
 }
 
-function normalize(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 export function findGender(participants: Participants, name: string): 'female' | 'male' | null {
