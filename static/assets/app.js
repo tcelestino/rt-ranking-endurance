@@ -246,6 +246,7 @@ function buildMonthMarkdown(m) {
 
 function buildAnnualMarkdown() {
   const section = state.annual
+    .filter((r) => r.km > 0)
     .map((r) => {
       return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km);
     })
