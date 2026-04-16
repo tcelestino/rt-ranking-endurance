@@ -94,14 +94,10 @@ function calcTotal(allMonthsData) {
 }
 
 function renderTotal(total) {
-  return (
-    '<div class="total">' +
-    '<span class="total-label">Total:</span>' +
-    '<span class="total-value km">' +
-    formatKm(total) +
-    '</span>' +
-    '</div>'
-  );
+  return `<div class="total">
+    <span class="total-label">Total:</span>
+    <span class="total-value km">${formatKm(total)}</span>
+  </div>`;
 }
 
 function renderTotalMonth(runners) {
