@@ -135,22 +135,14 @@ function renderRows(runners) {
   return runners
     .map((r) => {
       const m = medal(r.position);
-      const medalHtml = m ? '<span class="medal">' + m + '</span>' : '';
-      const kmHtml = r.km === 0 ? '<span class="zero">0km</span>' : '<span class="km">' + r.km.toFixed(2) + 'km</span>';
-      return (
-        '<li class="runner' +
-        (r.km === 0 ? ' no-km' : '') +
-        '">' +
-        '<span class="pos">' +
-        r.position +
-        '.</span>' +
-        medalHtml +
-        '<span class="name">' +
-        escapeHtml(r.name) +
-        '</span>' +
-        kmHtml +
-        '</li>'
-      );
+      const medalHtml = m ? `<span class="medal">${m}</span>` : '';
+      const kmHtml = r.km === 0 ? `<span class="zero">0km</span>` : `<span class="km">${r.km.toFixed(2)}km</span>`;
+      return `<li class="runner ${r.km === 0 ? 'no-km' : ''}">
+        <span class="pos">${r.position}.</span>
+        ${medalHtml}
+        <span class="name">${escapeHtml(r.name)}</span>
+        ${kmHtml}
+      </li>`;
     })
     .join('');
 }
@@ -169,17 +161,7 @@ function renderUI() {
   $tabsEl.innerHTML = state.months
     .map((m) => {
       const active = m.month === activeMonth ? ' active' : '';
-      return (
-        '<button class="tab' +
-        active +
-        '" data-month="' +
-        m.month +
-        '" onclick="switchTab(' +
-        m.month +
-        ')">' +
-        m.monthName +
-        '</button>'
-      );
+      return `<button class="tab${active}" data-month="${m.month}" onclick="switchTab('${m.month}')">${m.monthName}</button>`;
     })
     .join('');
 
@@ -190,36 +172,29 @@ function renderUI() {
 
   $contentsEl.innerHTML = state.months
     .map((m) => {
-      const active = m.month === activeMonth ? ' active' : '';
-      return (
-        '<div id="content-' +
-        m.month +
-        '" class="month-content' +
-        active +
-        '">' +
-        (shouldShowWinners(m.month, currentMonth, isLastDay) ? renderMonthWinnerCard(m.female, m.male) : '') +
-        '<div class="section">' +
-        '<div class="section-header">🏃‍♀️ Feminino</div>' +
-        '<ul class="runner-list">' +
-        renderRows(m.female) +
-        '</ul>' +
-        renderTotalMonth(m.female) +
-        '</div>' +
-        '<div class="section">' +
-        '<div class="section-header">🏃‍♂️ Masculino</div>' +
-        '<ul class="runner-list">' +
-        renderRows(m.male) +
-        '</ul>' +
-        renderTotalMonth(m.male) +
-        '</div>' +
-        '</div>'
-      );
+      const active = m.month === activeMonth ? 'active' : '';
+
+      return `
+        <div id="content-${m.month}" class="month-content ${active}">
+          ${shouldShowWinners(m.month, currentMonth, isLastDay) ? renderMonthWinnerCard(m.female, m.male) : ''}
+          <div class="section">
+            <div class="section-header">🏃‍♀️ Feminino</div>
+            <ul class="runner-list">${renderRows(m.female)}</ul>
+            ${renderTotalMonth(m.female)}
+          </div>
+          <div class="section">
+            <div class="section-header">🏃‍♂️ Masculino</div>
+            <ul class="runner-list">${renderRows(m.male)}</ul>
+            ${renderTotalMonth(m.male)}
+          </div>
+        </div>
+      `;
     })
     .join('');
 
   // Annual
   $annualList.innerHTML = renderRows(state.annual);
-  $annualSection.querySelector('.section-header').textContent = '🏆 Ranking Anual ' + state.year;
+  $annualSection.querySelector('.section-header').textContent = `🏆 Ranking Anual ${state.year}`;
   $annualSection.classList.add('show');
   $annualTotal.innerHTML = renderTotal(state.totalAnnual);
 
@@ -229,8 +204,7 @@ function renderUI() {
 function updateTitle() {
   const m = state.months.find((m) => m.month === activeMonth);
   const monthName = m ? m.monthName : '';
-  document.getElementById('title').innerHTML =
-    'R&T Clube de Corrida - Ranking Endurance<br>' + monthName + ' ' + state.year;
+  document.getElementById('title').innerHTML = `R&T Clube de Corrida - Ranking Endurance ${monthName} ${state.year}`;
 }
 
 function switchTab(month) {
@@ -276,7 +250,7 @@ function buildAnnualMarkdown() {
       return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km);
     })
     .join('\n');
-  return '\n*RANKING ANUAL - ' + state.year + '* 🏆 🏅\n' + section + '\n';
+  return `\n*RANKING ANUAL - ${state.year}* 🏆 🏅\n${section}\n`;
 }
 
 function setWhatsappEnabled(value) {
