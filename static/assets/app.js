@@ -117,8 +117,12 @@ function renderMonthWinnerCard(female, male) {
     ? '<div class="section">' +
       '<div class="section-header">🎉 Vencedora do Mês</div>' +
       '<div class="winner-row">' +
-      '<span class="name">' + escapeHtml(f.name) + '</span>' +
-      '<span class="km">' + formatKm(f.km) + '</span>' +
+      '<span class="name">' +
+      escapeHtml(f.name) +
+      '</span>' +
+      '<span class="km">' +
+      formatKm(f.km) +
+      '</span>' +
       '</div>' +
       '</div>'
     : '';
@@ -126,8 +130,12 @@ function renderMonthWinnerCard(female, male) {
     ? '<div class="section">' +
       '<div class="section-header">🎉 Vencedor do Mês</div>' +
       '<div class="winner-row">' +
-      '<span class="name">' + escapeHtml(m.name) + '</span>' +
-      '<span class="km">' + formatKm(m.km) + '</span>' +
+      '<span class="name">' +
+      escapeHtml(m.name) +
+      '</span>' +
+      '<span class="km">' +
+      formatKm(m.km) +
+      '</span>' +
       '</div>' +
       '</div>'
     : '';
@@ -255,6 +263,7 @@ function buildMonthMarkdown(m) {
   const monthUpper = m.monthName.toUpperCase();
   const section = (runners) => {
     return runners
+      .filter((r) => r.km > 0)
       .map((r) => {
         return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km);
       })
@@ -295,7 +304,7 @@ function showCopyButton() {
 function copyToWhatsApp() {
   const m = state.months.find((m) => m.month === activeMonth);
   if (!m) return;
-  const text = buildMonthMarkdown(m) + buildAnnualMarkdown();
+  const text = buildMonthMarkdown(m) + '\n' + buildAnnualMarkdown();
   navigator.clipboard
     .writeText(text)
     .then(showToast)
