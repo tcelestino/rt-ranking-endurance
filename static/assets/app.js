@@ -122,34 +122,13 @@ function templateRanking(title, runner) {
 function renderMonthWinnerCard(female, male) {
   const f = female[0];
   const m = male[0];
+
   if (!f && !m) return '';
-  const femaleCard = f
-    ? '<div class="section">' +
-      '<div class="section-header">🎉 Vencedora do Mês</div>' +
-      '<div class="winner-row">' +
-      '<span class="name">' +
-      escapeHtml(f.name) +
-      '</span>' +
-      '<span class="km">' +
-      formatKm(f.km) +
-      '</span>' +
-      '</div>' +
-      '</div>'
-    : '';
-  const maleCard = m
-    ? '<div class="section">' +
-      '<div class="section-header">🎉 Vencedor do Mês</div>' +
-      '<div class="winner-row">' +
-      '<span class="name">' +
-      escapeHtml(m.name) +
-      '</span>' +
-      '<span class="km">' +
-      formatKm(m.km) +
-      '</span>' +
-      '</div>' +
-      '</div>'
-    : '';
-  return '<div class="winner-cards">' + femaleCard + maleCard + '</div>';
+
+  const femaleCard = f ? templateRanking('Vencedora do Mês', f) : '';
+  const maleCard = m ? templateRanking('Vencedor do Mês', m) : '';
+
+  return `<div class="winner-cards">${femaleCard} ${maleCard}</div>`;
 }
 
 function renderRows(runners) {
