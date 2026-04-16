@@ -109,6 +109,16 @@ function renderTotalMonth(runners) {
   return renderTotal(total);
 }
 
+function templateRanking(title, runner) {
+  return `<div class="section">
+  <div class="section-header">🎉 ${title}</div>
+  <div class="winner-row">
+  <span class="name">${escapeHtml(runner.name)}</span>
+  <span class="km">${formatKm(runner.km)}</span>
+  </div>
+  </div>`;
+}
+
 function renderMonthWinnerCard(female, male) {
   const f = female[0];
   const m = male[0];
