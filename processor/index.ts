@@ -41,7 +41,8 @@ async function main() {
   for (const imagePath of imageFiles) {
     const filename = path.basename(imagePath);
     const nameWithoutExt = path.basename(imagePath, path.extname(imagePath));
-    const runnerName = capitalizeFirstLetter(nameWithoutExt);
+    const baseName = nameWithoutExt.replace(/_\d+$/, '');
+    const runnerName = capitalizeFirstLetter(baseName);
 
     const gender = findGender(participants, runnerName);
     if (!gender) {
