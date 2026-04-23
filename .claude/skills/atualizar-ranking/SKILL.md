@@ -28,16 +28,13 @@ git commit -m "update: dados $(date +%d/%m/%Y)"
 git push origin HEAD
 ```
 
-### 4. Criar Pull Request e fazer merge
+### 4. Criar Pull Request
 ```bash
 gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
-gh pr merge <numero> --squash --delete-branch
 ```
 
-> Substitua `<numero>` pelo número do PR retornado pelo `gh pr create`.
-
 ### 5. Limpar pasta images
-Após o merge:
+Após criar o pull request, execute:
 ```bash
 npm run clear:images
 ```
@@ -45,5 +42,5 @@ npm run clear:images
 ## Regras
 
 - **Nunca** executar `npm run generate:manifest` nesse fluxo.
-- Sempre aguardar o merge antes de limpar as imagens.
+- Sempre aguardar a criação do pull requests antes de limpar as imagens.
 - Confirmar com o usuário antes de fazer push/PR caso haja dúvida sobre os dados processados.
