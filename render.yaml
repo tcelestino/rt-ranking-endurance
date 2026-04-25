@@ -5,8 +5,8 @@ services:
     rootDir: api
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
-    branch: "main"
-    autoDeployTrigger: "commit"
+    branch: 'main'
+    autoDeployTrigger: 'off'
     buildFilter:
       paths:
         - api/**/*
@@ -22,8 +22,8 @@ services:
     name: rt-ranking-endurance
     rootDir: static
     staticPublishPath: .
-    branch: "main"
-    autoDeployTrigger: "commit"
+    branch: 'main'
+    autoDeployTrigger: 'off'
     buildFilter:
       paths:
         - static/**/*
