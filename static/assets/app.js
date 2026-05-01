@@ -200,7 +200,7 @@ function renderUI() {
 function updateTitle() {
   const m = state.months.find((m) => m.month === activeMonth);
   const monthName = m ? m.monthName : '';
-  document.getElementById('title').innerHTML = `R&T Clube de Corrida - Ranking Endurance ${monthName} ${state.year}`;
+  document.getElementById('title').innerHTML = `R&T Clube de Corrida - Ranking Endurance ${state.year}`;
 }
 
 function switchTab(month) {
