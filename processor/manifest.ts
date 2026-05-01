@@ -37,6 +37,33 @@ const SLUG_TO_MONTH: Record<string, number> = {
   dezembro: 12,
 };
 
+const MONTH_TO_SLUG: Record<number, string> = Object.fromEntries(
+  Object.entries(SLUG_TO_MONTH).map(([slug, month]) => [month, slug]),
+);
+
+function ensureCurrentMonthFiles(currentMonth: number): void {
+  const slug = MONTH_TO_SLUG[currentMonth];
+  if (!slug) return;
+
+  const dataDir = path.resolve('data');
+  const runnersPath = path.resolve(dataDir, 'runners.json');
+  if (!fs.existsSync(runnersPath)) return;
+
+  const runners: { female: string[]; male: string[] } = JSON.parse(fs.readFileSync(runnersPath, 'utf-8'));
+
+  for (const gender of ['female', 'male'] as const) {
+    const filePath = path.resolve(dataDir, `${gender}-${slug}.json`);
+    if (!fs.existsSync(filePath)) {
+      const entries = runners[gender].map((name) => ({ name, km: [0] }));
+      if (entries.length === 0) {
+        throw new Error(`Nenhum corredor encontrado para gênero "${gender}" em runners.json`);
+      }
+      fs.writeFileSync(filePath, JSON.stringify(entries, null, 2) + '\n', 'utf-8');
+      console.log(`Criado: data/${gender}-${slug}.json`);
+    }
+  }
+}
+
 function getCurrentMonth(): number {
   const env = process.env.CURRENT_MONTH;
   if (env) {
@@ -86,6 +113,7 @@ function main() {
   const currentMonth = getCurrentMonth();
   //TODO: buscar o ano a partir do nome do arquivo. Ex.: female-04-2024.json -> 2024
   const year = new Date().getFullYear();
+  ensureCurrentMonthFiles(currentMonth);
   const availableMonths = getAvailableMonths();
 
   if (availableMonths.length === 0) {
