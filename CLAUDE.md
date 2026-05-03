@@ -61,7 +61,7 @@ O projeto tem três partes independentes:
 
 **`processor/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
 
-**`processor/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findGender()`.
+**`processor/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findParticipant()`.
 
 **`processor/imageFiles.ts`** — funções utilitárias para a pasta `images/`: `getImageFiles` (lista arquivos suportados) e `deleteImagesFiles` (remove os arquivos). Usado por `index.ts` e `clearImages.ts`.
 
