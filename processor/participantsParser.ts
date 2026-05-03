@@ -30,3 +30,15 @@ export function findGender(participants: Participants, name: string): 'female' |
   }
   return null;
 }
+
+export function findCanonicalName(participants: Participants, name: string): string | null {
+  const normalized = normalize(name);
+
+  const female = participants.female.find((n) => normalize(n) === normalized);
+  if (female) return female;
+
+  const male = participants.male.find((n) => normalize(n) === normalized);
+  if (male) return male;
+
+  return null;
+}

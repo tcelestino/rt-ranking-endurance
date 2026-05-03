@@ -1,7 +1,7 @@
 import * as path from 'path';
 import 'dotenv/config';
 import { extractKmFromImage } from './imageAnalyzerGemini';
-import { loadParticipants, findGender } from './participantsParser';
+import { loadParticipants, findGender, findCanonicalName } from './participantsParser';
 import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
 import { computeHash, getCached, storeCache } from './cacheManager';
 import { getImageFiles } from './imageFiles';
@@ -50,6 +50,8 @@ async function main() {
       continue;
     }
 
+    const canonicalName = findCanonicalName(participants, runnerName)!;
+
     try {
       process.stdout.write(`Processando ${filename}...`);
       const today = new Date().toISOString().slice(0, 10);
@@ -59,19 +61,19 @@ async function main() {
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
+        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km (cache — ignorando)`);
       } else {
         km = await extractKmFromImage(imagePath);
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);
+        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km`);
         storeCache(hash, { km, date: today, filename });
 
         const data = loadMonthData(gender, month);
-        appendKm(data, runnerName, km);
+        appendKm(data, canonicalName, km);
         saveMonthData(gender, month, data);
       }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
-      results.push({ file: filename, runner: runnerName, km, gender });
+      results.push({ file: filename, runner: canonicalName, km, gender });
     } catch (err) {
       console.log(` ✗`);
       console.error(`  Erro ao processar ${filename}: ${err instanceof Error ? err.message : err}`);
