@@ -24,14 +24,16 @@ export function findParticipant(
   name: string,
 ): { gender: 'female' | 'male'; canonicalName: string } | null {
   const normalized = normalize(name);
+  const female = participants.female.some((n) => normalize(n) === normalized);
+  const male = participants.male.some((n) => normalize(n) === normalized);
 
-  if (participants.female.some((n) => normalize(n) === normalized)) {
+  if (female) {
     return {
       gender: 'female',
       canonicalName: participants.female.find((n) => normalize(n) === normalized)!,
     };
   }
-  if (participants.male.some((n) => normalize(n) === normalized)) {
+  if (male) {
     return {
       gender: 'male',
       canonicalName: participants.male.find((n) => normalize(n) === normalized)!,
