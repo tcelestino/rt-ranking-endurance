@@ -1,7 +1,7 @@
 import * as path from 'path';
 import 'dotenv/config';
 import { extractKmFromImage } from './imageAnalyzerGemini';
-import { loadParticipants, findGender, findCanonicalName } from './participantsParser';
+import { loadParticipants, findParticipant } from './participantsParser';
 import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
 import { computeHash, getCached, storeCache } from './cacheManager';
 import { getImageFiles } from './imageFiles';
@@ -44,13 +44,13 @@ async function main() {
     const baseName = nameWithoutExt.replace(/_\d+$/, '');
     const runnerName = capitalizeFirstLetter(baseName);
 
-    const gender = findGender(participants, runnerName);
-    if (!gender) {
+    const participant = findParticipant(participants, runnerName);
+    if (!participant) {
       console.warn(`  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`);
       continue;
     }
 
-    const canonicalName = findCanonicalName(participants, runnerName)!;
+    const { gender, canonicalName } = participant;
 
     try {
       process.stdout.write(`Processando ${filename}...`);
