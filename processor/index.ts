@@ -1,7 +1,7 @@
 import * as path from 'path';
 import 'dotenv/config';
 import { extractKmFromImage } from './imageAnalyzerGemini';
-import { loadParticipants, findGender } from './participantsParser';
+import { loadParticipants, findParticipant } from './participantsParser';
 import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
 import { computeHash, getCached, storeCache } from './cacheManager';
 import { getImageFiles } from './imageFiles';
@@ -44,11 +44,13 @@ async function main() {
     const baseName = nameWithoutExt.replace(/_\d+$/, '');
     const runnerName = capitalizeFirstLetter(baseName);
 
-    const gender = findGender(participants, runnerName);
-    if (!gender) {
+    const participant = findParticipant(participants, runnerName);
+    if (!participant) {
       console.warn(`  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`);
       continue;
     }
+
+    const { gender, canonicalName } = participant;
 
     try {
       process.stdout.write(`Processando ${filename}...`);
@@ -59,19 +61,19 @@ async function main() {
       let km: number;
       if (cached) {
         km = cached.km;
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km (cache — ignorando)`);
+        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km (cache — ignorando)`);
       } else {
         km = await extractKmFromImage(imagePath);
-        process.stdout.write(` ${runnerName} → ${km.toFixed(2)}km`);
+        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km`);
         storeCache(hash, { km, date: today, filename });
 
         const data = loadMonthData(gender, month);
-        appendKm(data, runnerName, km);
+        appendKm(data, canonicalName, km);
         saveMonthData(gender, month, data);
       }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
-      results.push({ file: filename, runner: runnerName, km, gender });
+      results.push({ file: filename, runner: canonicalName, km, gender });
     } catch (err) {
       console.log(` ✗`);
       console.error(`  Erro ao processar ${filename}: ${err instanceof Error ? err.message : err}`);
