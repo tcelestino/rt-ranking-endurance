@@ -19,26 +19,23 @@ export function normalize(s: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-export function findGender(participants: Participants, name: string): 'female' | 'male' | null {
+export function findParticipant(
+  participants: Participants,
+  name: string,
+): { gender: 'female' | 'male'; canonicalName: string } | null {
   const normalized = normalize(name);
 
   if (participants.female.some((n) => normalize(n) === normalized)) {
-    return 'female';
+    return {
+      gender: 'female',
+      canonicalName: participants.female.find((n) => normalize(n) === normalized)!,
+    };
   }
   if (participants.male.some((n) => normalize(n) === normalized)) {
-    return 'male';
+    return {
+      gender: 'male',
+      canonicalName: participants.male.find((n) => normalize(n) === normalized)!,
+    };
   }
-  return null;
-}
-
-export function findCanonicalName(participants: Participants, name: string): string | null {
-  const normalized = normalize(name);
-
-  const female = participants.female.find((n) => normalize(n) === normalized);
-  if (female) return female;
-
-  const male = participants.male.find((n) => normalize(n) === normalized);
-  if (male) return male;
-
   return null;
 }
