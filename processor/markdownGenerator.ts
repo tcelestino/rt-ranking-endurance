@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadParticipants, normalize } from './participantsParser';
-import { loadMonthData, getMonthName } from './jsonUpdater';
+import { loadMonthData, getMonthName, ParticipantRecord } from './jsonUpdater';
 import { getCurrentMonth } from './utils';
 
 interface RunnerResult {
@@ -70,13 +70,14 @@ function calcAnnualRanking(): RunnerResult[] {
 
   for (const name of allNames) totals.set(normalize(name), 0);
 
+  //TODO: fazer quebra por ano. Ex.: data/2025/female-junho.json
   const files = fs
     .readdirSync(dataDir)
     .filter((f) => f.endsWith('.json') && !['runners.json', 'manifest.json'].includes(f) && !f.startsWith('.'));
 
   for (const file of files) {
     const raw = fs.readFileSync(path.join(dataDir, file), 'utf-8');
-    const records: { name: string; km: number[] }[] = JSON.parse(raw);
+    const records: ParticipantRecord[] = JSON.parse(raw);
     for (const record of records) {
       const key = normalize(record.name);
       const kmSum = record.km.reduce((a, b) => a + b, 0);
@@ -84,9 +85,9 @@ function calcAnnualRanking(): RunnerResult[] {
     }
   }
 
-  const results = Array.from(totals.entries()).map(([key, km]) => ({
-    name: canonicalNames.get(key) ?? key,
-    km,
+  const results = allNames.map((name) => ({
+    name,
+    km: totals.get(normalize(name)) ?? 0,
   }));
 
   return rankRunners(results);
@@ -127,9 +128,11 @@ function main() {
     const year = new Date().getFullYear();
     const slug = getMonthName(currentMonth);
 
-    const filePath = path.resolve('data', `female-${slug}.json`);
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Dados do mês ${slug} não encontrados (${filePath}).`);
+    const femaleFilePath = path.resolve('data', `female-${slug}.json`);
+    const maleFilePath = path.resolve('data', `male-${slug}.json`);
+
+    if (!fs.existsSync(femaleFilePath) || !fs.existsSync(maleFilePath)) {
+      throw new Error(`Dados do mês ${slug} não encontrados (${femaleFilePath} ou ${maleFilePath}).`);
     }
 
     const monthMarkdown = buildMonthMarkdown(currentMonth, year);
@@ -141,10 +144,10 @@ function main() {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const outputPath = path.resolve(outputDir, 'results.md');
+    const outputPath = path.resolve(outputDir, 'ranking.md');
     fs.writeFileSync(outputPath, markdown, 'utf-8');
 
-    console.log(`output/results.md gerado com sucesso (${MONTH_DISPLAY[slug]} ${year})`);
+    console.log(`output/ranking.md gerado com sucesso (${MONTH_DISPLAY[slug]} ${year})`);
   } catch (error) {
     console.error(`Erro: ${error instanceof Error ? error.message : error}`);
     process.exit(1);
