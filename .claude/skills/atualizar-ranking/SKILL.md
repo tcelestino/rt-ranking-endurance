@@ -96,6 +96,23 @@ Após o merge:
 npm run clear:images
 ```
 
+### 7. Gerar arquivo ranking.md
+Após a limpeza da pasta de imagens, gere o arquivo `ranking.md` executando o comando:
+
+```bash
+npm run generate:markdown || { echo "Falha ao gerar ranking.md. Verifique os arquivos de dados."; exit 1; }
+```
+
+Após rodar o comando, o arquivo `output/ranking.md` será atualizado. Ele é gerado automaticamente e não deve ser versionado, portanto, **não faça commit deste arquivo**.
+
+Copie o conteúdo para a área de transferência:
+
+```bash
+pbcopy < output/ranking.md
+```
+
+Informe ao usuário que o conteúdo do `output/ranking.md` foi copiado para a área de transferência.
+
 ## Regras
 
 - O manifest só é atualizado quando a skill roda no **primeiro dia do mês** (`date +%d` == `01`).
