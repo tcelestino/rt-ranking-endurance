@@ -5,19 +5,7 @@ import { loadParticipants, findParticipant } from './participantsParser';
 import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
 import { computeHash, getCached, storeCache } from './cacheManager';
 import { getImageFiles } from './imageFiles';
-
-function capitalizeFirstLetter(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-function getCurrentMonth(): number {
-  const env = process.env.CURRENT_MONTH;
-  if (env) {
-    const parsed = parseInt(env, 10);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
-  }
-  return new Date().getMonth() + 1;
-}
+import { getCurrentMonth, capitalizeFirstLetter } from './utils';
 
 async function main() {
   const participants = loadParticipants();
