@@ -335,8 +335,8 @@ function toggleTheme() {
   });
 
   Promise.all([
-    fetch(API_BASE + '/api/manifest').then((r) => r.json()),
-    fetch(API_BASE + '/api/runners').then((r) => r.json()),
+    fetch(`${API_BASE}/api/manifest`).then((r) => r.json()),
+    fetch(`${API_BASE}/api/runners`).then((r) => r.json()),
   ])
     .then((results) => {
       const manifest = results[0];
@@ -353,12 +353,12 @@ function toggleTheme() {
       return Promise.all(
         manifest.months.map(async (m) => {
           const data = await Promise.all([
-            fetch(API_BASE + '/api/data/' + m.slug + '/female')
+            fetch(`${API_BASE}/api/data/${state.year}/${m.slug}/female`)
               .then((r) => r.json())
               .catch(() => {
                 return [];
               }),
-            fetch(API_BASE + '/api/data/' + m.slug + '/male')
+            fetch(`${API_BASE}/api/data/${state.year}/${m.slug}/male`)
               .then((r) => r.json())
               .catch(() => {
                 return [];
