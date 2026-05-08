@@ -34,7 +34,7 @@ async function main() {
     const baseName = nameWithoutExt.replace(/_\d+$/, '');
     const runnerName = capitalizeFirstLetter(baseName);
     const participant = findParticipant(participants, runnerName);
-    
+
     if (!participant) {
       console.warn(`  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`);
       continue;
@@ -57,9 +57,9 @@ async function main() {
         process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km`);
         storeCache(hash, { km, date: today, filename });
 
-        const data = loadMonthData(gender, month);
+        const data = await loadMonthData(gender, month);
         appendKm(data, canonicalName, km);
-        saveMonthData(gender, month, data);
+        await saveMonthData(gender, month, data);
       }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
