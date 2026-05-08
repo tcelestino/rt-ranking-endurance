@@ -7,6 +7,13 @@ import { computeHash, getCached, storeCache } from './cacheManager';
 import { getImageFiles } from './imageFiles';
 import { getCurrentMonth, capitalizeFirstLetter } from './utils';
 
+interface Results {
+  file: string;
+  runner: string;
+  km: number;
+  gender: string;
+}
+
 async function main() {
   const participants = loadParticipants();
   const month = getCurrentMonth();
@@ -19,20 +26,15 @@ async function main() {
     return;
   }
 
-  const results: Array<{
-    file: string;
-    runner: string;
-    km: number;
-    gender: string;
-  }> = [];
+  const results: Results[] = [];
 
   for (const imagePath of imageFiles) {
     const filename = path.basename(imagePath);
     const nameWithoutExt = path.basename(imagePath, path.extname(imagePath));
     const baseName = nameWithoutExt.replace(/_\d+$/, '');
     const runnerName = capitalizeFirstLetter(baseName);
-
     const participant = findParticipant(participants, runnerName);
+
     if (!participant) {
       console.warn(`  Participante "${runnerName}" não encontrado em data/runners.json — ignorando`);
       continue;
@@ -55,9 +57,9 @@ async function main() {
         process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km`);
         storeCache(hash, { km, date: today, filename });
 
-        const data = loadMonthData(gender, month);
+        const data = await loadMonthData(gender, month);
         appendKm(data, canonicalName, km);
-        saveMonthData(gender, month, data);
+        await saveMonthData(gender, month, data);
       }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
