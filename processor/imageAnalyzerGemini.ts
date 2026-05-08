@@ -11,16 +11,12 @@ export async function extractKmFromImage(imagePath: string): Promise<number> {
   const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
   const prompt = [
     {
-      text: `This is a screenshot from a running activity app (Strava, Garmin Connect, Nike Run Club, Apple Fitness, Polar, Suunto, etc.) or a treadmill display/result screen.
-
-Task: Extract ONLY the total distance of the running activity as a decimal number.
-
+      text: `Extract the total running distance from this screenshot.
 Rules:
-- Find the main distance value (labeled "Distance", "Distância", or equivalent in any language)
-- If the unit shown is miles (mi), convert to kilometers by multiplying by 1.60934
-- Return ONLY the numeric value using a period as decimal separator (e.g., 47.03)
-- No units, no text, no explanation — just the number
-- If no clear distance value is found, return 0`,
+1. Return ONLY the numeric value (decimal, use '.' separator).
+2. No units or explanation.
+3. If not found, return null.
+Examples: "10,5 km" -> 10.5 | "5.25" -> 5.25 | none -> null`,
     },
     {
       inlineData: { mimeType, data: base64Image },
