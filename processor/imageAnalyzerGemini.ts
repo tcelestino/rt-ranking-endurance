@@ -11,7 +11,12 @@ export async function extractKmFromImage(imagePath: string): Promise<number> {
   const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
   const prompt = [
     {
-      text: 'Esta é uma imagem de um app de corrida (Strava, Garmin, Nike Run, etc). Extraia SOMENTE o total de km percorridos como número decimal (ex: 47.03). Responda apenas o número, sem texto adicional, sem unidade de medida.',
+      text: `Extract the total running distance from this screenshot.
+Rules:
+1. Return ONLY the numeric value (decimal, use '.' separator).
+2. No units or explanation.
+3. If not found, return null.
+Examples: "10,5 km" -> 10.5 | "5.25" -> 5.25 | none -> null`,
     },
     {
       inlineData: { mimeType, data: base64Image },
