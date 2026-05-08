@@ -35,8 +35,7 @@ export function getMonthName(month: number): string {
 export function getDataFilePath(gender: 'female' | 'male', month: number): string {
   const monthStr = getMonthName(month);
   const year = getFullYear();
-  const data = path.resolve(__dirname, '..', 'data', year.toString());
-  return path.resolve(data, `${gender}-${monthStr}.json`);
+  return path.resolve('data', year.toString(), `${gender}-${monthStr}.json`);
 }
 
 export function loadMonthData(gender: 'female' | 'male', month: number): ParticipantRecord[] {
