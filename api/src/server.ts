@@ -35,34 +35,44 @@ const validateMonth = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-function readJsonFile(filePath: string, res: express.Response): void {
-  fs.readFile(filePath, 'utf-8', (err, data) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        res.status(404).json({ error: 'Dado não encontrado' });
-      } else {
-        res.status(500).json({ error: 'Erro ao ler os dados' });
-      }
-      return;
+const validateYear = (req: Request, res: Response, next: NextFunction) => {
+  const { year } = req.params;
+  if (year && !/^\d{4}$/.test(year as string)) {
+    return res.status(400).json({ error: 'Parâmetro de ano inválido' });
+  }
+  next();
+};
+
+async function readJsonFile(filePath: string, res: express.Response): Promise<void> {
+  try {
+    const data = await fs.promises.readFile(filePath, 'utf-8');
+    res.json(JSON.parse(data));
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      res.status(404).json({ error: 'Dado não encontrado' });
+    } else {
+      console.error(`Erro ao ler arquivo ${filePath}:`, err);
+      res.status(500).json({ error: 'Erro ao ler os dados' });
     }
-    try {
-      res.json(JSON.parse(data));
-    } catch {
-      res.status(500).json({ error: 'Erro ao fazer o parse do JSON' });
-    }
-  });
+  }
 }
 
 function getDataByYear(year?: string): string {
-  const fullYear = !year ? new Date().getFullYear() : year;
-  return path.resolve(DATA_DIR, fullYear.toString());
+  const fullYear = !year ? new Date().getFullYear().toString() : year;
+  return path.join(DATA_DIR, fullYear);
 }
 
-function resultData(gender: 'male' | 'female', req: Request, res: Response) {
+async function resultData(gender: 'male' | 'female', req: Request, res: Response) {
   const { year, month } = req.params;
-  const data = getDataByYear(year as string);
+  const dataDir = getDataByYear(year as string);
+  const filePath = path.join(dataDir, `${gender}-${month}.json`);
 
-  readJsonFile(path.join(data, `${gender}-${month}.json`), res);
+  // Adicional safety check: ensure the resolved path is still within DATA_DIR
+  if (!filePath.startsWith(DATA_DIR)) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  await readJsonFile(filePath, res);
 }
 
 app.use(
@@ -84,20 +94,20 @@ const limiter =
 
 app.use(limiter);
 
-app.get('/api/manifest', (_req, res) => {
-  readJsonFile(path.join(DATA_DIR, 'manifest.json'), res);
+app.get('/api/manifest', async (_req, res) => {
+  await readJsonFile(path.join(DATA_DIR, 'manifest.json'), res);
 });
 
-app.get('/api/runners', (_req, res) => {
-  readJsonFile(path.join(DATA_DIR, 'runners.json'), res);
+app.get('/api/runners', async (_req, res) => {
+  await readJsonFile(path.join(DATA_DIR, 'runners.json'), res);
 });
 
-app.get('/api/data/:year/:month/female', validateMonth, (req, res) => {
-  resultData('female', req, res);
+app.get('/api/data/:year/:month/female', validateYear, validateMonth, async (req, res) => {
+  await resultData('female', req, res);
 });
 
-app.get('/api/data/:year/:month/male', validateMonth, (req, res) => {
-  resultData('male', req, res);
+app.get('/api/data/:year/:month/male', validateYear, validateMonth, async (req, res) => {
+  await resultData('male', req, res);
 });
 
 app.listen(PORT, () => {
