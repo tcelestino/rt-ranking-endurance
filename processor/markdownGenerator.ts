@@ -1,8 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadParticipants, normalize } from './participantsParser';
-import { loadMonthData, getMonthName, ParticipantRecord } from './jsonUpdater';
+import { getDataFilePath, getFullYear, getMonthName, ParticipantRecord } from './jsonUpdater';
 import { getCurrentMonth } from './utils';
+
+function loadMonthDataSync(gender: 'female' | 'male', month: number): ParticipantRecord[] {
+  const filePath = getDataFilePath(gender, month);
+  if (!fs.existsSync(filePath)) return [];
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
+}
 
 interface RunnerResult {
   name: string;
@@ -42,7 +48,7 @@ function getMedal(position: number): string {
 function calcMonthlyRanking(gender: 'female' | 'male', month: number): RunnerResult[] {
   const participants = loadParticipants();
   const names = gender === 'female' ? participants.female : participants.male;
-  const data = loadMonthData(gender, month);
+  const data = loadMonthDataSync(gender, month);
 
   const kmMap = new Map<string, number>();
   for (const record of data) {
@@ -65,23 +71,27 @@ function calcAnnualRanking(): RunnerResult[] {
   const participants = loadParticipants();
   const allNames = [...participants.female, ...participants.male];
 
-  const canonicalNames = new Map(allNames.map((n) => [normalize(n), n]));
   const totals = new Map<string, number>();
-
   for (const name of allNames) totals.set(normalize(name), 0);
 
-  //TODO: fazer quebra por ano. Ex.: data/2025/female-junho.json
-  const files = fs
+  const yearDirs = fs
     .readdirSync(dataDir)
-    .filter((f) => f.endsWith('.json') && !['runners.json', 'manifest.json'].includes(f) && !f.startsWith('.'));
+    .filter((entry) => /^\d{4}$/.test(entry) && fs.statSync(path.join(dataDir, entry)).isDirectory());
 
-  for (const file of files) {
-    const raw = fs.readFileSync(path.join(dataDir, file), 'utf-8');
-    const records: ParticipantRecord[] = JSON.parse(raw);
-    for (const record of records) {
-      const key = normalize(record.name);
-      const kmSum = record.km.reduce((a, b) => a + b, 0);
-      totals.set(key, (totals.get(key) ?? 0) + kmSum);
+  for (const yearDir of yearDirs) {
+    const yearPath = path.join(dataDir, yearDir);
+    const files = fs
+      .readdirSync(yearPath)
+      .filter((f) => f.endsWith('.json') && !f.startsWith('.'));
+
+    for (const file of files) {
+      const raw = fs.readFileSync(path.join(yearPath, file), 'utf-8');
+      const records: ParticipantRecord[] = JSON.parse(raw);
+      for (const record of records) {
+        const key = normalize(record.name);
+        const kmSum = record.km.reduce((a, b) => a + b, 0);
+        totals.set(key, (totals.get(key) ?? 0) + kmSum);
+      }
     }
   }
 
@@ -128,8 +138,8 @@ function main() {
     const year = new Date().getFullYear();
     const slug = getMonthName(currentMonth);
 
-    const femaleFilePath = path.resolve('data', `female-${slug}.json`);
-    const maleFilePath = path.resolve('data', `male-${slug}.json`);
+    const femaleFilePath = getDataFilePath('female', currentMonth);
+    const maleFilePath = getDataFilePath('male', currentMonth);
 
     if (!fs.existsSync(femaleFilePath) || !fs.existsSync(maleFilePath)) {
       throw new Error(`Dados do mês ${slug} não encontrados (${femaleFilePath} ou ${maleFilePath}).`);
