@@ -22,6 +22,10 @@ const MONTH_NAMES: Record<number, string> = {
   12: 'dezembro',
 };
 
+export function getFullYear(): number {
+  return new Date().getFullYear();
+}
+
 export function getMonthName(month: number): string {
   const name = MONTH_NAMES[month];
   if (!name) throw new Error(`Mês inválido: ${month}`);
@@ -30,7 +34,9 @@ export function getMonthName(month: number): string {
 
 export function getDataFilePath(gender: 'female' | 'male', month: number): string {
   const monthStr = getMonthName(month);
-  return path.resolve('data', `${gender}-${monthStr}.json`);
+  const year = getFullYear();
+  const data = path.resolve(__dirname, '..', 'data', year.toString());
+  return path.resolve(data, `${gender}-${monthStr}.json`);
 }
 
 export function loadMonthData(gender: 'female' | 'male', month: number): ParticipantRecord[] {
