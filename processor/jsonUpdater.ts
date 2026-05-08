@@ -35,15 +35,19 @@ export function getMonthName(month: number): string {
 export function getDataFilePath(gender: 'female' | 'male', month: number): string {
   const monthStr = getMonthName(month);
   const year = getFullYear();
-  return path.resolve('data', year.toString(), `${gender}-${monthStr}.json`);
+
+  return path.resolve(process.cwd(), 'data', year.toString(), `${gender}-${monthStr}.json`);
 }
 
-export function loadMonthData(gender: 'female' | 'male', month: number): ParticipantRecord[] {
+export async function loadMonthData(gender: 'female' | 'male', month: number): Promise<ParticipantRecord[]> {
   const filePath = getDataFilePath(gender, month);
-  if (!fs.existsSync(filePath)) return [];
-
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(raw) as ParticipantRecord[];
+  try {
+    const raw = await fs.promises.readFile(filePath, 'utf-8');
+    return JSON.parse(raw) as ParticipantRecord[];
+  } catch (err: any) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
 }
 
 export function appendKm(data: ParticipantRecord[], name: string, km: number): ParticipantRecord[] {
@@ -57,13 +61,19 @@ export function appendKm(data: ParticipantRecord[], name: string, km: number): P
   return data;
 }
 
-export function saveMonthData(gender: 'female' | 'male', month: number, data: ParticipantRecord[]): void {
+export async function saveMonthData(
+  gender: 'female' | 'male',
+  month: number,
+  data: ParticipantRecord[],
+): Promise<void> {
   const filePath = getDataFilePath(gender, month);
   const dir = path.dirname(filePath);
 
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+  } catch (err) {
+    console.error(`Erro ao salvar dados em ${filePath}:`, err);
+    throw err;
   }
-
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
