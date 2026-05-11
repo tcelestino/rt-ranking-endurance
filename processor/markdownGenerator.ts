@@ -75,9 +75,7 @@ function calcAnnualRanking(): RunnerResult[] {
 
   for (const yearDir of yearDirs) {
     const yearPath = path.join(dataDir, yearDir);
-    const files = fs
-      .readdirSync(yearPath)
-      .filter((f) => f.endsWith('.json') && !f.startsWith('.') && !['runners.json', 'manifest.json'].includes(f));
+    const files = fs.readdirSync(yearPath).filter((f) => /^(female|male)-.+\.json$/.test(f));
 
     for (const file of files) {
       const raw = fs.readFileSync(path.join(yearPath, file), 'utf-8');
