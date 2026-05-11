@@ -1,14 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadParticipants, normalize } from './participantsParser';
-import { getDataFilePath, getFullYear, getMonthName, ParticipantRecord } from './jsonUpdater';
+import { getDataFilePath, getMonthName, getFullYear, loadMonthDataSync, ParticipantRecord } from './jsonUpdater';
 import { getCurrentMonth } from './utils';
-
-function loadMonthDataSync(gender: 'female' | 'male', month: number): ParticipantRecord[] {
-  const filePath = getDataFilePath(gender, month);
-  if (!fs.existsSync(filePath)) return [];
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
-}
 
 interface RunnerResult {
   name: string;
@@ -75,14 +69,15 @@ function calcAnnualRanking(): RunnerResult[] {
   for (const name of allNames) totals.set(normalize(name), 0);
 
   const yearDirs = fs
-    .readdirSync(dataDir)
-    .filter((entry) => /^\d{4}$/.test(entry) && fs.statSync(path.join(dataDir, entry)).isDirectory());
+    .readdirSync(dataDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^\d{4}$/.test(entry.name))
+    .map((entry) => entry.name);
 
   for (const yearDir of yearDirs) {
     const yearPath = path.join(dataDir, yearDir);
     const files = fs
       .readdirSync(yearPath)
-      .filter((f) => f.endsWith('.json') && !f.startsWith('.'));
+      .filter((f) => f.endsWith('.json') && !f.startsWith('.') && !['runners.json', 'manifest.json'].includes(f));
 
     for (const file of files) {
       const raw = fs.readFileSync(path.join(yearPath, file), 'utf-8');
@@ -135,7 +130,7 @@ function buildAnnualMarkdown(year: number): string {
 function main() {
   try {
     const currentMonth = getCurrentMonth();
-    const year = new Date().getFullYear();
+    const year = getFullYear();
     const slug = getMonthName(currentMonth);
 
     const femaleFilePath = getDataFilePath('female', currentMonth);

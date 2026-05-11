@@ -50,6 +50,12 @@ export async function loadMonthData(gender: 'female' | 'male', month: number): P
   }
 }
 
+export function loadMonthDataSync(gender: 'female' | 'male', month: number): ParticipantRecord[] {
+  const filePath = getDataFilePath(gender, month);
+  if (!fs.existsSync(filePath)) return [];
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
+}
+
 export function appendKm(data: ParticipantRecord[], name: string, km: number): ParticipantRecord[] {
   const normalizedName = normalize(name);
   const existing = data.find((p) => p.name === name || normalize(p.name) === normalizedName);
