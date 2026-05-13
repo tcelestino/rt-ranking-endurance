@@ -24,7 +24,7 @@ Examples: "10,5 km" -> 10.5 | "5.25" -> 5.25 | none -> null`,
   ];
 
   const response = await client.models.generateContent({
-    model: 'gemini-3.1-flash-image-preview',
+    model: 'gemini-3.1-flash-lite',
     contents: prompt,
   });
 
