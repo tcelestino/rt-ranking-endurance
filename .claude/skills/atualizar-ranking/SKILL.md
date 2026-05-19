@@ -70,33 +70,7 @@ git checkout main && git pull origin main
 npm run update
 ```
 
-### 3. Criar branch
-```bash
-git checkout -b update-$(date +%d)-$(date +%m)-$(date +%Y)
-```
-
-### 4. Commit e push
-```bash
-git add data/
-git commit -m "update: dados $(date +%d/%m/%Y)"
-git push origin HEAD
-```
-
-### 5. Criar Pull Request e fazer merge
-```bash
-gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
-gh pr merge <numero> --squash --delete-branch
-```
-
-Substitua `<numero>` pelo número do PR retornado pelo `gh pr create`.
-
-### 6. Limpar pasta images
-Após o merge:
-```bash
-npm run clear:images
-```
-
-### 7. Gerar arquivo ranking.md
+### 3. Gerar arquivo ranking.md
 Após a limpeza da pasta de imagens, gere o arquivo `ranking.md` executando o comando:
 
 ```bash
@@ -112,6 +86,32 @@ pbcopy < output/ranking.md
 ```
 
 Informe ao usuário que o conteúdo do `output/ranking.md` foi copiado para a área de transferência.
+
+### 4. Criar branch
+```bash
+git checkout -b update-$(date +%d)-$(date +%m)-$(date +%Y)
+```
+
+### 5. Commit e push
+```bash
+git add data/
+git commit -m "update: dados $(date +%d/%m/%Y)"
+git push origin HEAD
+```
+
+### 6. Criar Pull Request e fazer merge
+```bash
+gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
+gh pr merge <numero> --squash --delete-branch
+```
+
+Substitua `<numero>` pelo número do PR retornado pelo `gh pr create`.
+
+### 7. Limpar pasta images
+Após o merge:
+```bash
+npm run clear:images
+```
 
 ## Regras
 
