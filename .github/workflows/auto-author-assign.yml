@@ -1,0 +1,15 @@
+name: 'Auto Author Assign'
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request_target:
+    types: [opened, reopened]
+
+jobs:
+  assign-author:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: toshimaru/auto-author-assign@v3.0.2
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
