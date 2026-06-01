@@ -42,7 +42,9 @@ const MONTH_TO_SLUG: Record<number, string> = Object.fromEntries(
 );
 
 const ACTUAL_YEAR = new Date().getFullYear();
+
 const DATA_DIR = path.resolve('data');
+const YEAR_DIR = path.join(DATA_DIR, `${ACTUAL_YEAR}`);
 
 function ensureCurrentMonthFiles(currentMonth: number): void {
   const slug = MONTH_TO_SLUG[currentMonth];
@@ -51,13 +53,12 @@ function ensureCurrentMonthFiles(currentMonth: number): void {
   const runnersPath = path.resolve(DATA_DIR, 'runners.json');
   if (!fs.existsSync(runnersPath)) return;
 
-  const yearDir = path.resolve(DATA_DIR, `${ACTUAL_YEAR}`);
-  if (!fs.existsSync(yearDir)) fs.mkdirSync(yearDir);
+  if (!fs.existsSync(YEAR_DIR)) fs.mkdirSync(YEAR_DIR);
 
   const runners: { female: string[]; male: string[] } = JSON.parse(fs.readFileSync(runnersPath, 'utf-8'));
 
   for (const gender of ['female', 'male'] as const) {
-    const filePath = path.resolve(yearDir, `${gender}-${slug}.json`);
+    const filePath = path.resolve(YEAR_DIR, `${gender}-${slug}.json`);
     if (!fs.existsSync(filePath)) {
       const entries = runners[gender].map((name) => ({ name, km: [0] }));
       if (entries.length === 0) {
@@ -80,8 +81,9 @@ function getCurrentMonth(): number {
 
 function getAvailableMonths(): { month: number; slug: string }[] {
   if (!fs.existsSync(DATA_DIR)) return [];
+  if (!fs.existsSync(YEAR_DIR)) return [];
 
-  const files = fs.readdirSync(`${DATA_DIR}/${ACTUAL_YEAR}`).filter((f) => /^(female|male)-.+\.json$/.test(f));
+  const files = fs.readdirSync(YEAR_DIR).filter((f) => /^(female|male)-.+\.json$/.test(f));
 
   const result: { month: number; slug: string }[] = [];
   const seen = new Set<number>();
