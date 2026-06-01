@@ -3,6 +3,26 @@
   "currentMonth": 6,
   "months": [
     {
+      "month": 2,
+      "slug": "fevereiro",
+      "monthName": "Fevereiro"
+    },
+    {
+      "month": 3,
+      "slug": "marco",
+      "monthName": "Março"
+    },
+    {
+      "month": 4,
+      "slug": "abril",
+      "monthName": "Abril"
+    },
+    {
+      "month": 5,
+      "slug": "maio",
+      "monthName": "Maio"
+    },
+    {
       "month": 6,
       "slug": "junho",
       "monthName": "Junho"
