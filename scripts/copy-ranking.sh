@@ -23,6 +23,8 @@ elif [ "$OS" = "Linux" ]; then
     echo "Erro: nenhuma ferramenta de clipboard encontrada. Instale wl-copy (Wayland), xclip ou xsel (X11)." >&2
     exit 1
   fi
+elif [[ "$OS" == MINGW* || "$OS" == MSYS* || "$OS" == CYGWIN* ]]; then
+  clip.exe < "$RANKING_FILE"
 else
   echo "Erro: sistema operacional '$OS' não suportado." >&2
   exit 1
