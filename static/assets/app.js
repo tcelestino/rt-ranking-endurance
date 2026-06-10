@@ -6,6 +6,7 @@ const RANKING_ONLINE_URL = 'https://rt-ranking-endurance.onrender.com';
 
 let activeMonth = null;
 let state = { months: [], annual: [], year: null, totalAnnual: 0 };
+const monthElements = new Map();
 
 const $btnToggleTheme = document.getElementById('theme-toggle');
 
@@ -162,7 +163,7 @@ function renderUI() {
   $tabsEl.innerHTML = state.months
     .map((m) => {
       const active = m.month === activeMonth ? ' active' : '';
-      return `<button class="tab${active}" data-month="${m.month}" onclick="switchTab('${m.month}')">${m.monthName}</button>`;
+      return `<button class="tab${active}" data-month="${escapeHtml(m.month)}">${escapeHtml(m.monthName)}</button>`;
     })
     .join('');
 
@@ -193,6 +194,16 @@ function renderUI() {
     })
     .join('');
 
+  monthElements.clear();
+  $tabsEl.querySelectorAll('.tab').forEach(($tab) => {
+    const month = Number($tab.dataset.month);
+    monthElements.set(month, {
+      tab: $tab,
+      content: document.getElementById(`content-${month}`),
+    });
+    $tab.addEventListener('click', () => switchTab(month));
+  });
+
   // Annual
   $annualList.innerHTML = renderRows(state.annual);
   $annualSection.querySelector('.section-header').textContent = `🏆 Ranking Anual ${state.year}`;
@@ -209,16 +220,10 @@ function updateTitle() {
 
 function switchTab(month) {
   activeMonth = month;
-  document.querySelectorAll('.month-content').forEach((el) => {
-    el.classList.remove('active');
+  monthElements.forEach(({ tab, content }, m) => {
+    tab.classList.toggle('active', m === month);
+    if (content) content.classList.toggle('active', m === month);
   });
-  document.querySelectorAll('.tab').forEach((el) => {
-    el.classList.remove('active');
-  });
-  const content = document.getElementById('content-' + month);
-  if (content) content.classList.add('active');
-  const tab = document.querySelector('[data-month="' + month + '"]');
-  if (tab) tab.classList.add('active');
   updateTitle();
 }
 
@@ -274,11 +279,12 @@ function copyToWhatsApp() {
     .writeText(text)
     .then(showToast)
     .catch(() => {
+      //fallback
       const ta = document.createElement('textarea');
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy'); //TODO: validar qual seria o comando atual para realizar tal operação
+      document.execCommand('copy');
       document.body.removeChild(ta);
       showToast();
     });
