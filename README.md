@@ -52,6 +52,9 @@ rt-ranking-endurance/
 │   ├── manifest.json             # Meses disponíveis (gerado por npm run generate:manifest)
 │   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
+├── scripts/                      # Scripts de automação (uso local)
+│   ├── copy-ranking.sh           # Copia output/ranking.md para o clipboard
+│   └── deploy.sh                 # Cria branch, commit, PR e merge dos dados
 ├── images/                       # Coloque aqui os screenshots dos corredores
 ├── render.yaml                   # Configuração de deploy no Render.com
 ├── .env.example                  # Modelos das variáveis de ambiente
@@ -63,6 +66,7 @@ rt-ranking-endurance/
 
 - Node.js 22+
 - Conta no [Google AI Studio](https://aistudio.google.com) com acesso à API Gemini
+- [GitHub CLI](https://cli.github.com) (`gh`) autenticado — necessário para `npm run deploy`
 
 ## Instalação
 
@@ -92,7 +96,72 @@ Para usar o processamento das imagens, é preciso adicionar sua chave da API do 
 
 Para obter a chave, acesse o [https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br](https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br)
 
-## Uso
+## Atualizando os dados do ranking
+
+Fluxo completo para atualizar os dados de corrida e publicar no ranking.
+
+### Primeiro dia do mês
+
+No primeiro dia de cada mês, atualize o `manifest.json` antes de processar as imagens:
+
+```bash
+git checkout main && git pull origin main
+npm run clear:cache
+npm run generate:manifest
+```
+
+Em seguida, publique o manifest:
+
+```bash
+git checkout -b update-manifest-$(date +%m)-$(date +%Y)
+git add data/
+git commit -m "chore: atualização do manifest $(date +%m/%Y)"
+git push origin HEAD
+gh pr create --title "chore: atualização manifest.json" --body "Atualização do manifest.json para o mês $(date +%m/%Y)" --base main
+gh pr merge --squash --delete-branch
+git checkout main && git pull origin main
+```
+
+Depois, continue com o fluxo normal abaixo.
+
+### Fluxo normal (demais dias)
+
+#### 1. Processar imagens
+
+Coloque os screenshots na pasta `images/` e execute:
+
+```bash
+npm run update
+```
+
+#### 2. Gerar e copiar o ranking
+
+```bash
+npm run generate:markdown
+npm run copy:ranking
+```
+
+O conteúdo de `output/ranking.md` é copiado para o clipboard (macOS e Linux). Cole onde precisar (WhatsApp, planilha, etc.).
+
+#### 3. Publicar os dados
+
+```bash
+npm run deploy
+```
+
+O script cria automaticamente o branch com a data de hoje, commita os JSONs de `data/`, abre o PR e faz o merge com squash.
+
+> Se o repositório tiver branch protection ativa (revisão obrigatória ou CI), o merge automático falhará. O script exibirá a URL do PR para que o merge seja feito manualmente.
+
+#### 4. Limpar imagens
+
+```bash
+npm run clear:images
+```
+
+---
+
+## Uso (comandos individuais)
 
 ### 1. Processar imagens
 
