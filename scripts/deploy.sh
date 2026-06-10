@@ -26,7 +26,7 @@ fi
 git fetch origin "$BASE_BRANCH"
 git checkout -B "$BRANCH_NAME" "origin/$BASE_BRANCH"
 
-git add data/
+git add data/manifest.json 'data/*/female-*.json' 'data/*/male-*.json' 'data/runners.json' # apenas .json que precisam ser commitados
 git commit -m "$COMMIT_MSG"
 git push -u origin "$BRANCH_NAME" --force-with-lease
 
