@@ -52,6 +52,9 @@ rt-ranking-endurance/
 │   ├── manifest.json             # Meses disponíveis (gerado por npm run generate:manifest)
 │   ├── female-[mes].json         # Dados mensais femininos (gerado por npm run update)
 │   └── male-[mes].json           # Dados mensais masculinos (gerado por npm run update)
+├── scripts/                      # Scripts de automação (uso local)
+│   ├── copy-ranking.sh           # Copia output/ranking.md para o clipboard
+│   └── deploy.sh                 # Cria branch, commit, PR e merge dos dados
 ├── images/                       # Coloque aqui os screenshots dos corredores
 ├── render.yaml                   # Configuração de deploy no Render.com
 ├── .env.example                  # Modelos das variáveis de ambiente
@@ -63,6 +66,7 @@ rt-ranking-endurance/
 
 - Node.js 22+
 - Conta no [Google AI Studio](https://aistudio.google.com) com acesso à API Gemini
+- [GitHub CLI](https://cli.github.com) (`gh`) autenticado — necessário para `npm run deploy`
 
 ## Instalação
 
@@ -92,7 +96,72 @@ Para usar o processamento das imagens, é preciso adicionar sua chave da API do 
 
 Para obter a chave, acesse o [https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br](https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br)
 
-## Uso
+## Atualizando os dados do ranking
+
+Fluxo completo para atualizar os dados de corrida e publicar no ranking.
+
+### Primeiro dia do mês
+
+No primeiro dia de cada mês, atualize o `manifest.json` antes de processar as imagens:
+
+```bash
+git checkout main && git pull origin main
+npm run clear:cache
+npm run generate:manifest
+```
+
+Em seguida, publique o manifest:
+
+```bash
+git checkout -b update-manifest-$(date +%m)-$(date +%Y)
+git add data/
+git commit -m "chore: atualização do manifest $(date +%m/%Y)"
+git push origin HEAD
+gh pr create --title "chore: atualização manifest.json" --body "Atualização do manifest.json para o mês $(date +%m/%Y)" --base main
+gh pr merge --squash --delete-branch
+git checkout main && git pull origin main
+```
+
+Depois, continue com o fluxo normal abaixo.
+
+### Fluxo normal (demais dias)
+
+#### 1. Processar imagens
+
+Coloque os screenshots na pasta `images/` e execute:
+
+```bash
+npm run update
+```
+
+#### 2. Gerar e copiar o ranking
+
+```bash
+npm run generate:markdown
+npm run copy:ranking
+```
+
+O conteúdo de `output/ranking.md` é copiado para o clipboard (macOS e Linux). Cole onde precisar (WhatsApp, planilha, etc.).
+
+#### 3. Publicar os dados
+
+```bash
+npm run deploy
+```
+
+O script cria automaticamente o branch com a data de hoje, commita os JSONs de `data/`, abre o PR e faz o merge com squash.
+
+> Se o repositório tiver branch protection ativa (revisão obrigatória ou CI), o merge automático falhará. O script exibirá a URL do PR para que o merge seja feito manualmente.
+
+#### 4. Limpar imagens
+
+```bash
+npm run clear:images
+```
+
+---
+
+## Uso (comandos individuais)
 
 ### 1. Processar imagens
 
@@ -129,7 +198,28 @@ npm run generate:manifest
 Gera o arquivo:
 - `data/manifest.json` — lista de meses disponíveis para o frontend
 
-### 3. Limpar pasta "images"
+### 3. Gerar markdown
+```bash
+npm run generate:markdown
+```
+
+Gera e ou atualiza arquivo markdown.
+- `output/ranking.md` — ranking atualizado em formato markdown
+
+### 4. Copiar resultado
+ ```bash
+ npm run copy:ranking
+ ```
+Faz a cópia do arquivo `output/ranking.md` para a área de transferência.
+
+### 5. Deploy
+```bash
+npm run deploy
+```
+Cria a branch de atualização, pull request e merge automático utilizando o `gh`.
+
+
+### 6. Limpar pasta "images"
 
 ```bash
 npm run clear:images
@@ -137,8 +227,7 @@ npm run clear:images
 
 Remove todas imagens existentes na pasta `/images`
 
-
-### 4. Limpar cache das imagens
+### 7. Limpar cache das imagens
 
 ```bash
 npm run clear:cache
@@ -146,7 +235,9 @@ npm run clear:cache
 
 Limpa o cache das imagens já enviadas para análise no Gemini
 
-### 5. Visualizar rankings no browser (desenvolvimento local)
+## API e frontend
+
+### 1. Visualizar rankings no browser (desenvolvimento local)
 
 Terminal 1 — inicia a API:
 
@@ -154,11 +245,22 @@ Terminal 1 — inicia a API:
 npm run api:dev
 ```
 
+A API lê os JSONs de `data/` (commitados no repositório) e os expõe via 4 endpoints:
+
+```
+GET /api/manifest
+GET /api/runners
+GET /api/data/:month/female
+GET /api/data/:month/male
+```
+
 Terminal 2 — serve o frontend:
 
 ```bash
 npm run serve
 ```
+
+O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
 
 Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o botão "Copiar para WhatsApp".
 
@@ -170,17 +272,6 @@ O arquivo `render.yaml` configura dois serviços independentes:
 |---|---|---|
 | `rt-ranking-endurance-api` | Web (Node) | `api/` |
 | `rt-ranking-endurance-static` | Static Site | `static/` |
-
-A API lê os JSONs de `data/` (commitados no repositório) e os expõe via 4 endpoints:
-
-```
-GET /api/manifest
-GET /api/runners
-GET /api/data/:month/female
-GET /api/data/:month/male
-```
-
-O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
 
 ## Formatos de imagem suportados
 
