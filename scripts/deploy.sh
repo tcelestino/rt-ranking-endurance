@@ -18,12 +18,14 @@ if ! gh auth status &>/dev/null; then
   exit 1
 fi
 
-if git diff --quiet HEAD -- data/ && git diff --cached --quiet -- data/; then
+if [ -z "$(git status --porcelain -- data/)" ]; then
   echo "Aviso: nenhuma alteração em data/ para commitar." >&2
   exit 1
 fi
 
-git checkout -B "$BRANCH_NAME"
+git fetch origin "$BASE_BRANCH"
+git checkout -B "$BRANCH_NAME" "origin/$BASE_BRANCH"
+
 git add data/
 git commit -m "$COMMIT_MSG"
 git push -u origin "$BRANCH_NAME" --force-with-lease
@@ -48,9 +50,8 @@ if gh pr merge "$BRANCH_NAME" \
   git branch -D "$BRANCH_NAME" 2>/dev/null || true
   echo "Deploy concluído: PR '$PR_TITLE' mergeado com squash."
 else
-  git checkout "$BASE_BRANCH"
-  git branch -D "$BRANCH_NAME" 2>/dev/null || true
   echo "Aviso: merge automático falhou (branch protection ativa ou checks pendentes)." >&2
+  echo "Sua branch local '$BRANCH_NAME' foi mantida para que você possa fazer ajustes." >&2
   echo "Revise e faça o merge manualmente: $PR_URL" >&2
   exit 1
 fi
