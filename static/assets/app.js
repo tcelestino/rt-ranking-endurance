@@ -219,7 +219,8 @@ function updateTitle() {
 }
 
 function switchTab(month) {
-  activeMonth = month;
+  const monthNum = Number(month);
+  activeMonth = monthNum;
   monthElements.forEach(({ tab, content }, m) => {
     tab.classList.toggle('active', m === month);
     if (content) content.classList.toggle('active', m === month);
