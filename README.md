@@ -198,7 +198,28 @@ npm run generate:manifest
 Gera o arquivo:
 - `data/manifest.json` — lista de meses disponíveis para o frontend
 
-### 3. Limpar pasta "images"
+### 3. Gerar markdown
+```bash
+npm run generate:markdown
+```
+
+Gera e ou atualiza arquivo markdown.
+- `output/ranking.md` — ranking atualizado em formato markdown
+
+### 4. Copiar resultado
+ ```bash
+ npm run copy:ranking
+ ```
+Faz a cópia do arquivo `output/ranking.md` para a área de transferência.
+
+### 5. Deploy
+```bash
+npm run deploy
+```
+Cria a branch de atualização, pull request e merge automático utilizando o `gh`.
+
+
+### 6. Limpar pasta "images"
 
 ```bash
 npm run clear:images
@@ -206,8 +227,7 @@ npm run clear:images
 
 Remove todas imagens existentes na pasta `/images`
 
-
-### 4. Limpar cache das imagens
+### 7. Limpar cache das imagens
 
 ```bash
 npm run clear:cache
@@ -215,7 +235,9 @@ npm run clear:cache
 
 Limpa o cache das imagens já enviadas para análise no Gemini
 
-### 5. Visualizar rankings no browser (desenvolvimento local)
+## API e frontend
+
+### 1. Visualizar rankings no browser (desenvolvimento local)
 
 Terminal 1 — inicia a API:
 
@@ -223,11 +245,22 @@ Terminal 1 — inicia a API:
 npm run api:dev
 ```
 
+A API lê os JSONs de `data/` (commitados no repositório) e os expõe via 4 endpoints:
+
+```
+GET /api/manifest
+GET /api/runners
+GET /api/data/:month/female
+GET /api/data/:month/male
+```
+
 Terminal 2 — serve o frontend:
 
 ```bash
 npm run serve
 ```
+
+O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
 
 Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o botão "Copiar para WhatsApp".
 
@@ -239,17 +272,6 @@ O arquivo `render.yaml` configura dois serviços independentes:
 |---|---|---|
 | `rt-ranking-endurance-api` | Web (Node) | `api/` |
 | `rt-ranking-endurance-static` | Static Site | `static/` |
-
-A API lê os JSONs de `data/` (commitados no repositório) e os expõe via 4 endpoints:
-
-```
-GET /api/manifest
-GET /api/runners
-GET /api/data/:month/female
-GET /api/data/:month/male
-```
-
-O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
 
 ## Formatos de imagem suportados
 
