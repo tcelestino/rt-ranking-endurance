@@ -1,5 +1,18 @@
 {
-  "female": ["Ademildes", "Aida", "Carol", "Eli", "Erivana", "Lane", "Larissa", "Luciane", "Tamara", "Tércia", "Willy"],
+  "female": [
+    "Ademildes",
+    "Aida",
+    "Carol",
+    "Carine",
+    "Eli",
+    "Erivana",
+    "Lane",
+    "Larissa",
+    "Luciane",
+    "Tamara",
+    "Tércia",
+    "Willy"
+  ],
   "male": [
     "Adomarques",
     "André",
