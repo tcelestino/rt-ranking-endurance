@@ -1,6 +1,6 @@
 {
   "year": 2026,
-  "currentMonth": 6,
+  "currentMonth": 7,
   "months": [
     {
       "month": 2,
@@ -26,6 +26,11 @@
       "month": 6,
       "slug": "junho",
       "monthName": "Junho"
+    },
+    {
+      "month": 7,
+      "slug": "julho",
+      "monthName": "Julho"
     }
   ]
 }
