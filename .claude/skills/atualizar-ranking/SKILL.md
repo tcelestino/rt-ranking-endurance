@@ -87,27 +87,14 @@ pbcopy < output/ranking.md
 
 Informe ao usuário que o conteúdo do `output/ranking.md` foi copiado para a área de transferência.
 
-### 4. Criar branch
+### 4. Deploy (branch, commit, PR e merge)
 ```bash
-git checkout -b update-$(date +%d)-$(date +%m)-$(date +%Y)
+npm run deploy
 ```
 
-### 5. Commit e push
-```bash
-git add data/
-git commit -m "update: dados $(date +%d/%m/%Y)"
-git push origin HEAD
-```
+O script `scripts/deploy.sh` cuida de todo o fluxo: cria a branch `update-DD-MM-YYYY` (reutilizando o PR aberto se um deploy anterior falhou no merge), commita os JSONs de `data/`, faz push, cria o PR e faz merge com `--squash --delete-branch`. Se o merge automático falhar, siga as instruções exibidas pelo script.
 
-### 6. Criar Pull Request e fazer merge
-```bash
-gh pr create --title "Atualização: $(date +%d/%m/%Y)" --body "Update automático de dados de corrida do dia" --base main
-gh pr merge <numero> --squash --delete-branch
-```
-
-Substitua `<numero>` pelo número do PR retornado pelo `gh pr create`.
-
-### 7. Limpar pasta images
+### 5. Limpar pasta images
 Após o merge:
 ```bash
 npm run clear:images
