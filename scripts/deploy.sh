@@ -6,6 +6,17 @@ DATE_BR=$(date +"%d/%m/%Y")
 DATE_BRANCH=$(date +"%d-%m-%Y")
 BRANCH_NAME="update-${DATE_BRANCH}"
 COMMIT_MSG="update: dados ${DATE_BR}"
+
+resolve_branch_name() {
+  local base_name="$1"
+  local name="$base_name"
+  local suffix=2
+  while git ls-remote --exit-code --heads origin "$name" &>/dev/null; do
+    name="${base_name}-${suffix}"
+    suffix=$((suffix + 1))
+  done
+  echo "$name"
+}
 PR_TITLE="Atualização: ${DATE_BR}"
 
 if ! command -v gh &>/dev/null; then
@@ -24,6 +35,10 @@ if [ -z "$(git status --porcelain -- data/)" ]; then
 fi
 
 git fetch origin "$BASE_BRANCH"
+
+BRANCH_NAME=$(resolve_branch_name "$BRANCH_NAME")
+echo "Branch: $BRANCH_NAME"
+
 git checkout -B "$BRANCH_NAME" "origin/$BASE_BRANCH"
 
 git add data/manifest.json 'data/*/female-*.json' 'data/*/male-*.json' 'data/runners.json' # apenas .json que precisam ser commitados
