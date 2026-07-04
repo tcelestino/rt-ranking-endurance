@@ -6,18 +6,28 @@ DATE_BR=$(date +"%d/%m/%Y")
 DATE_BRANCH=$(date +"%d-%m-%Y")
 BRANCH_NAME="update-${DATE_BRANCH}"
 COMMIT_MSG="update: dados ${DATE_BR}"
+PR_TITLE="Atualização: ${DATE_BR}"
 
 resolve_branch_name() {
   local base_name="$1"
   local name="$base_name"
   local suffix=2
-  while git ls-remote --exit-code --heads origin "$name" &>/dev/null; do
+  local open_pr
+  while git show-ref --verify --quiet "refs/remotes/origin/$name" ||
+        git show-ref --verify --quiet "refs/heads/$name"; do
+    if git show-ref --verify --quiet "refs/remotes/origin/$name"; then
+      open_pr=$(gh pr list --head "$name" --state open --json number --jq '.[0].number // empty')
+      if [ -n "$open_pr" ]; then
+        echo "Reutilizando branch '$name': o PR #$open_pr aberto será atualizado com o estado atual de data/." >&2
+        echo "$name"
+        return
+      fi
+    fi
     name="${base_name}-${suffix}"
     suffix=$((suffix + 1))
   done
   echo "$name"
 }
-PR_TITLE="Atualização: ${DATE_BR}"
 
 if ! command -v gh &>/dev/null; then
   echo "Erro: GitHub CLI (gh) não encontrado. Instale em https://cli.github.com" >&2
@@ -34,28 +44,32 @@ if [ -z "$(git status --porcelain -- data/)" ]; then
   exit 1
 fi
 
-git fetch origin "$BASE_BRANCH"
+git fetch --prune origin
 
 BRANCH_NAME=$(resolve_branch_name "$BRANCH_NAME")
 echo "Branch: $BRANCH_NAME"
 
+DATA_BACKUP=$(mktemp -d)
+trap 'rm -rf "$DATA_BACKUP"' EXIT
+cp -R data/. "$DATA_BACKUP/"
+git checkout --no-overlay "origin/$BASE_BRANCH" -- data/
 git checkout -B "$BRANCH_NAME" "origin/$BASE_BRANCH"
+cp -R "$DATA_BACKUP/." data/
 
 git add data/manifest.json 'data/*/female-*.json' 'data/*/male-*.json' 'data/runners.json' # apenas .json que precisam ser commitados
 git commit -m "$COMMIT_MSG"
 git push -u origin "$BRANCH_NAME" --force-with-lease
 
-if ! gh pr view "$BRANCH_NAME" &>/dev/null; then
-  gh pr create \
+PR_URL=$(gh pr list --head "$BRANCH_NAME" --state open --json url --jq '.[0].url // empty')
+if [ -z "$PR_URL" ]; then
+  PR_URL=$(gh pr create \
     --base "$BASE_BRANCH" \
     --head "$BRANCH_NAME" \
     --title "$PR_TITLE" \
-    --body "$COMMIT_MSG"
+    --body "$COMMIT_MSG")
 fi
 
-PR_URL=$(gh pr view "$BRANCH_NAME" --json url --jq '.url')
-
-if gh pr merge "$BRANCH_NAME" \
+if gh pr merge "$PR_URL" \
   --squash \
   --subject "$PR_TITLE" \
   --body "$COMMIT_MSG" \
@@ -66,7 +80,6 @@ if gh pr merge "$BRANCH_NAME" \
   echo "Deploy concluído: PR '$PR_TITLE' mergeado com squash."
 else
   echo "Aviso: merge automático falhou (branch protection ativa ou checks pendentes)." >&2
-  echo "Sua branch local '$BRANCH_NAME' foi mantida para que você possa fazer ajustes." >&2
-  echo "Revise e faça o merge manualmente: $PR_URL" >&2
+  echo "Execute o deploy novamente para atualizar o PR ou faça o merge manualmente: $PR_URL" >&2
   exit 1
 fi
