@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+AUTO_MERGE=true
+for arg in "$@"; do
+  case "$arg" in
+    --no-merge) AUTO_MERGE=false ;;
+    *)
+      echo "Erro: opção desconhecida '$arg'. Uso: $0 [--no-merge]" >&2
+      exit 1
+      ;;
+  esac
+done
+
 BASE_BRANCH="main"
 DATE_BR=$(date +"%d/%m/%Y")
 DATE_BRANCH=$(date +"%d-%m-%Y")
@@ -67,6 +78,12 @@ if [ -z "$PR_URL" ]; then
     --head "$BRANCH_NAME" \
     --title "$PR_TITLE" \
     --body "$COMMIT_MSG")
+fi
+
+if [ "$AUTO_MERGE" = false ]; then
+  echo "Deploy concluído sem merge automático: $PR_URL"
+  echo "Faça o merge manualmente quando quiser: gh pr merge $PR_URL --squash --delete-branch"
+  exit 0
 fi
 
 if gh pr merge "$PR_URL" \
