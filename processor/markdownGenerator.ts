@@ -96,11 +96,18 @@ function calcAnnualRanking(): RunnerResult[] {
   return rankRunners(results);
 }
 
+function calcTotalKm(runners: RunnerResult[]): number {
+  return runners.reduce((acc, r) => acc + r.km, 0);
+}
+
 function renderRankingSection(runners: RunnerResult[], filterZero = true): string {
-  return runners
+  const lines = runners
     .filter((r) => !filterZero || r.km > 0)
-    .map((r) => `${r.position}. ${getMedal(r.position)}${r.name} - ${formatKm(r.km)}`)
-    .join('\n');
+    .map((r) => `${r.position}. ${getMedal(r.position)}${r.name} - ${formatKm(r.km)}`);
+
+  lines.push(`Total: ${formatKm(calcTotalKm(runners))}`);
+
+  return lines.join('\n');
 }
 
 function buildMonthMarkdown(month: number, year: number): string {
