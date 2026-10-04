@@ -77,6 +77,13 @@ button.primary {
   font-weight: 600;
 }
 
+button.danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--bg-card);
+  font-weight: 600;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: wait;
@@ -351,6 +358,83 @@ button:disabled {
   font-size: 12px;
   color: var(--color-muted);
   font-weight: 500;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--color-muted);
+}
+
+.tab.active {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.runner-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.runner-form input,
+.runner-form select {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--color-text);
+}
+
+.runner-form input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.manage-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.manage-lists section {
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.manage-list {
+  list-style: none;
+}
+
+.manage-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.manage-list li:last-child {
+  border-bottom: none;
+}
+
+.manage-list button {
+  padding: 4px 10px;
+  font-size: 13px;
 }
 
 [hidden] {
