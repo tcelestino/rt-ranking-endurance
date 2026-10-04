@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { getCurrentMonth } from './utils';
 
 interface MonthData {
   month: number;
@@ -46,16 +47,17 @@ const ACTUAL_YEAR = new Date().getFullYear();
 const DATA_DIR = path.resolve('data');
 const YEAR_DIR = path.join(DATA_DIR, `${ACTUAL_YEAR}`);
 
-function ensureCurrentMonthFiles(currentMonth: number): void {
+function ensureCurrentMonthFiles(currentMonth: number): string[] {
   const slug = MONTH_TO_SLUG[currentMonth];
-  if (!slug) return;
+  if (!slug) return [];
 
   const runnersPath = path.resolve(DATA_DIR, 'runners.json');
-  if (!fs.existsSync(runnersPath)) return;
+  if (!fs.existsSync(runnersPath)) return [];
 
   if (!fs.existsSync(YEAR_DIR)) fs.mkdirSync(YEAR_DIR);
 
   const runners: { female: string[]; male: string[] } = JSON.parse(fs.readFileSync(runnersPath, 'utf-8'));
+  const createdFiles: string[] = [];
 
   for (const gender of ['female', 'male'] as const) {
     const filePath = path.resolve(YEAR_DIR, `${gender}-${slug}.json`);
@@ -65,18 +67,11 @@ function ensureCurrentMonthFiles(currentMonth: number): void {
         throw new Error(`Nenhum corredor encontrado para gênero "${gender}" em runners.json`);
       }
       fs.writeFileSync(filePath, JSON.stringify(entries, null, 2) + '\n', 'utf-8');
-      console.log(`Criado: data/${ACTUAL_YEAR}/${gender}-${slug}.json`);
+      createdFiles.push(`data/${ACTUAL_YEAR}/${gender}-${slug}.json`);
     }
   }
-}
 
-function getCurrentMonth(): number {
-  const env = process.env.CURRENT_MONTH;
-  if (env) {
-    const parsed = parseInt(env, 10);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
-  }
-  return new Date().getMonth() + 1;
+  return createdFiles;
 }
 
 function getAvailableMonths(): { month: number; slug: string }[] {
@@ -115,14 +110,34 @@ function writeManifest(months: MonthData[], currentMonth: number, year: number):
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 }
 
-function main() {
+export function isManifestCurrent(): boolean {
   const currentMonth = getCurrentMonth();
-  ensureCurrentMonthFiles(currentMonth);
+  const slug = MONTH_TO_SLUG[currentMonth];
+  const manifestPath = path.resolve(DATA_DIR, 'manifest.json');
+  if (!slug || !fs.existsSync(manifestPath)) return false;
+
+  const monthFilesExist = (['female', 'male'] as const).every((gender) =>
+    fs.existsSync(path.resolve(YEAR_DIR, `${gender}-${slug}.json`)),
+  );
+  if (!monthFilesExist) return false;
+
+  const manifest: { year: number; currentMonth: number; months: { month: number }[] } = JSON.parse(
+    fs.readFileSync(manifestPath, 'utf-8'),
+  );
+  return (
+    manifest.year === ACTUAL_YEAR &&
+    manifest.currentMonth === currentMonth &&
+    manifest.months.some((m) => m.month === currentMonth)
+  );
+}
+
+export function generateManifest(): { createdFiles: string[]; months: number } {
+  const currentMonth = getCurrentMonth();
+  const createdFiles = ensureCurrentMonthFiles(currentMonth);
   const availableMonths = getAvailableMonths();
 
   if (availableMonths.length === 0) {
-    console.error('Nenhum arquivo de dados encontrado em data/');
-    process.exit(1);
+    throw new Error('Nenhum arquivo de dados encontrado em data/');
   }
 
   const months: MonthData[] = availableMonths.map(({ month, slug }) => {
@@ -132,7 +147,18 @@ function main() {
 
   writeManifest(months, currentMonth, ACTUAL_YEAR);
 
-  console.log(`data/manifest.json gerado (${months.length} mês/meses)`);
+  return { createdFiles, months: months.length };
 }
 
-main();
+function main() {
+  try {
+    const { createdFiles, months } = generateManifest();
+    for (const file of createdFiles) console.log(`Criado: ${file}`);
+    console.log(`data/manifest.json gerado (${months} mês/meses)`);
+  } catch (error) {
+    console.error(`Erro: ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) main();

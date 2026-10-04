@@ -9,8 +9,23 @@
   <body>
     <header class="header">
       <h1>Backoffice</h1>
-      <p class="header-month" id="month-label">Carregando…</p>
+      <div class="header-actions">
+        <p class="header-month" id="month-label">Carregando…</p>
+        <button type="button" id="new-month-btn">Novo mês</button>
+      </div>
     </header>
+
+    <section class="panel" id="new-month-panel" hidden>
+      <h3>Iniciar <span id="new-month-label"></span></h3>
+      <p>
+        Gera o <code>manifest.json</code>, cria os JSONs do mês vigente (se ainda não existirem) e limpa o cache de
+        imagens. Depois, use a publicação para enviar as alterações.
+      </p>
+      <div class="actions-buttons">
+        <button type="button" id="new-month-cancel">Cancelar</button>
+        <button type="button" class="primary" id="new-month-confirm">Confirmar</button>
+      </div>
+    </section>
 
     <nav class="tabs" id="tabs">
       <button type="button" class="tab active" data-view="update">Atualizar km</button>
