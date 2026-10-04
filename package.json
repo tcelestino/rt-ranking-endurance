@@ -11,15 +11,19 @@
     "build": "tsc",
     "api:dev": "cd api && npm run dev",
     "api:build": "cd api && npm run build",
+    "backoffice": "tsx backoffice/src/server.ts",
+    "backoffice:check": "tsc -p backoffice --noEmit",
     "serve": "npx serve static",
     "copy:ranking": "bash scripts/copy-ranking.sh",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@google/genai": "2.8.0",
-    "dotenv": "17.4.2"
+    "dotenv": "17.4.2",
+    "express": "5.2.1"
   },
   "devDependencies": {
+    "@types/express": "5.0.6",
     "@types/node": "25.9.3",
     "tsx": "4.22.4",
     "typescript": "6.0.3"
