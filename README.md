@@ -130,6 +130,8 @@ npm run backoffice   # abre em http://localhost:3002
 
 Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sinalizadas e ignoradas. Depois de salvar, siga com os passos 2 e 3 do fluxo normal abaixo.
 
+Na aba **Participantes** é possível adicionar (informando o gênero) ou remover corredores de `data/runners.json`. A remoção não altera os JSONs mensais; o corredor apenas deixa de aparecer nos rankings.
+
 ## Atualizando os dados do ranking
 
 Fluxo completo para atualizar os dados de corrida e publicar no ranking.

@@ -4,7 +4,13 @@ import path from 'path';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
-import { findParticipant, loadParticipants } from '../../processor/participantsParser';
+import {
+  addParticipant,
+  findParticipant,
+  loadParticipants,
+  removeParticipant,
+  saveParticipants,
+} from '../../processor/participantsParser';
 import { getCurrentMonth } from '../../processor/utils';
 
 type Gender = 'female' | 'male';
@@ -124,6 +130,36 @@ app.post('/api/save', async (req, res, next) => {
       }
     }
 
+    res.json(await buildState());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/runners', async (req, res, next) => {
+  try {
+    const { name, gender } = req.body ?? {};
+    if (typeof name !== 'string' || !name.trim()) throw new HttpError(400, 'Nome do participante é obrigatório');
+    if (gender !== 'female' && gender !== 'male') throw new HttpError(400, `Gênero inválido: ${gender}`);
+
+    const participants = loadParticipants();
+    const existing = findParticipant(participants, name.trim());
+    if (existing) throw new HttpError(409, `Participante "${existing.canonicalName}" já existe`);
+
+    addParticipant(participants, name, gender);
+    saveParticipants(participants);
+    res.json(await buildState());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete('/api/runners/:name', async (req, res, next) => {
+  try {
+    const { canonicalName } = resolveParticipant(req.params.name);
+    const participants = loadParticipants();
+    removeParticipant(participants, canonicalName);
+    saveParticipants(participants);
     res.json(await buildState());
   } catch (err) {
     next(err);

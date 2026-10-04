@@ -12,49 +12,77 @@
       <p class="header-month" id="month-label">Carregando…</p>
     </header>
 
+    <nav class="tabs" id="tabs">
+      <button type="button" class="tab active" data-view="update">Atualizar km</button>
+      <button type="button" class="tab" data-view="runners">Participantes</button>
+    </nav>
+
     <p class="message" id="message" hidden></p>
 
-    <main class="layout">
-      <aside class="runners">
+    <div class="view" id="view-update">
+      <main class="layout">
+        <aside class="runners">
+          <section>
+            <h2>Feminino</h2>
+            <ul class="runner-list" id="list-female"></ul>
+          </section>
+          <section>
+            <h2>Masculino</h2>
+            <ul class="runner-list" id="list-male"></ul>
+          </section>
+        </aside>
+
+        <section class="workspace">
+          <p class="empty" id="empty">Marque os participantes que serão atualizados.</p>
+          <div id="cards"></div>
+        </section>
+      </main>
+
+      <footer class="actions" id="actions" hidden>
+        <div class="actions-buttons" id="actions-buttons">
+          <button type="button" id="analyze-btn">Analisar imagens</button>
+          <button type="button" class="primary" id="review-btn">Revisar e salvar</button>
+        </div>
+        <div class="confirm" id="confirm" hidden>
+          <h3>Confirmar atualização de <span id="confirm-month"></span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Participante</th>
+                <th>Novos km</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="confirm-body"></tbody>
+          </table>
+          <div class="actions-buttons">
+            <button type="button" id="cancel-btn">Voltar</button>
+            <button type="button" class="primary" id="save-btn">Confirmar e salvar</button>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <div class="view" id="view-runners" hidden>
+      <form class="runner-form" id="runner-form">
+        <input type="text" id="runner-name" placeholder="Nome do participante" required />
+        <select id="runner-gender">
+          <option value="female">Feminino</option>
+          <option value="male">Masculino</option>
+        </select>
+        <button type="submit" class="primary" id="runner-add-btn">Adicionar</button>
+      </form>
+      <div class="manage-lists">
         <section>
           <h2>Feminino</h2>
-          <ul class="runner-list" id="list-female"></ul>
+          <ul class="manage-list" id="manage-female"></ul>
         </section>
         <section>
           <h2>Masculino</h2>
-          <ul class="runner-list" id="list-male"></ul>
+          <ul class="manage-list" id="manage-male"></ul>
         </section>
-      </aside>
-
-      <section class="workspace">
-        <p class="empty" id="empty">Marque os participantes que serão atualizados.</p>
-        <div id="cards"></div>
-      </section>
-    </main>
-
-    <footer class="actions" id="actions" hidden>
-      <div class="actions-buttons" id="actions-buttons">
-        <button type="button" id="analyze-btn">Analisar imagens</button>
-        <button type="button" class="primary" id="review-btn">Revisar e salvar</button>
       </div>
-      <div class="confirm" id="confirm" hidden>
-        <h3>Confirmar atualização de <span id="confirm-month"></span></h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Participante</th>
-              <th>Novos km</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="confirm-body"></tbody>
-        </table>
-        <div class="actions-buttons">
-          <button type="button" id="cancel-btn">Voltar</button>
-          <button type="button" class="primary" id="save-btn">Confirmar e salvar</button>
-        </div>
-      </div>
-    </footer>
+    </div>
 
     <template id="card-template">
       <article class="card">

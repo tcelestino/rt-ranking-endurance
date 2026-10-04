@@ -90,6 +90,8 @@ O projeto tem quatro partes independentes:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual
 - `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, hash, cached }` (não grava nada)
 - `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
+- `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)
+- `DELETE /api/runners/:name` → remove de `runners.json` (JSONs mensais não são alterados)
 
 **`processor/imageAnalyzerCloudflare.ts`** — chama a REST API do Workers AI (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AI_MODEL` opcional; padrão `@cf/meta/llama-3.2-11b-vision-instruct`, que exige aceite único da licença Meta com `{"prompt":"agree"}`).
 

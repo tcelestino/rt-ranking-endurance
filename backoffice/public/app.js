@@ -5,6 +5,8 @@ const state = {
   participants: [],
   // nome do participante -> lista de imagens anexadas
   selected: new Map(),
+  // participante aguardando confirmação de remoção
+  pendingRemoval: null,
 };
 
 let nextImageId = 1;
@@ -294,13 +296,106 @@ async function save() {
     }
     state.selected.clear();
     closeConfirm();
-    renderRunners();
-    renderCards();
+    refreshRunnerViews();
     showMessage(`${entries.length} registro(s) salvo(s) em ${state.monthName}/${state.year}.`, 'success');
   } catch (err) {
     showMessage(err.message);
   } finally {
     $('save-btn').disabled = false;
+  }
+}
+
+// ---------- Gerenciamento de participantes ----------
+
+function renderManageRunners() {
+  for (const gender of ['female', 'male']) {
+    const list = $(`manage-${gender}`);
+    list.replaceChildren();
+    for (const p of state.participants.filter((r) => r.gender === gender)) {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'runner-name';
+      name.textContent = p.name;
+      li.append(name);
+
+      if (state.pendingRemoval === p.name) {
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = 'Cancelar';
+        cancel.addEventListener('click', () => {
+          state.pendingRemoval = null;
+          renderManageRunners();
+        });
+        const confirm = document.createElement('button');
+        confirm.type = 'button';
+        confirm.className = 'danger';
+        confirm.textContent = 'Confirmar remoção';
+        confirm.addEventListener('click', () => removeRunner(p.name, confirm));
+        li.append(cancel, confirm);
+      } else {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Remover';
+        remove.addEventListener('click', () => {
+          state.pendingRemoval = p.name;
+          renderManageRunners();
+        });
+        li.append(remove);
+      }
+      list.append(li);
+    }
+  }
+}
+
+function refreshRunnerViews() {
+  renderRunners();
+  renderCards();
+  renderManageRunners();
+}
+
+async function addRunner(event) {
+  event.preventDefault();
+  clearMessage();
+  const nameInput = $('runner-name');
+  const gender = $('runner-gender').value;
+  const name = nameInput.value.trim();
+  $('runner-add-btn').disabled = true;
+  try {
+    applyState(await postJson('/api/runners', { name, gender }));
+    nameInput.value = '';
+    refreshRunnerViews();
+    showMessage(`${name} adicionado(a) em ${gender === 'female' ? 'Feminino' : 'Masculino'}.`, 'success');
+  } catch (err) {
+    showMessage(err.message);
+  } finally {
+    $('runner-add-btn').disabled = false;
+  }
+}
+
+async function removeRunner(name, button) {
+  clearMessage();
+  button.disabled = true;
+  try {
+    applyState(await request(`/api/runners/${encodeURIComponent(name)}`, { method: 'DELETE' }));
+    state.pendingRemoval = null;
+    if (state.selected.has(name)) toggleRunner(name, false);
+    refreshRunnerViews();
+    showMessage(`${name} removido(a) da lista de participantes.`, 'success');
+  } catch (err) {
+    button.disabled = false;
+    showMessage(err.message);
+  }
+}
+
+// ---------- Navegação ----------
+
+function showView(view) {
+  clearMessage();
+  for (const tab of document.querySelectorAll('.tab')) {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  }
+  for (const el of document.querySelectorAll('.view')) {
+    el.hidden = el.id !== `view-${view}`;
   }
 }
 
@@ -319,11 +414,14 @@ async function init() {
   $('review-btn').addEventListener('click', openConfirm);
   $('cancel-btn').addEventListener('click', closeConfirm);
   $('save-btn').addEventListener('click', save);
+  $('runner-form').addEventListener('submit', addRunner);
+  for (const tab of document.querySelectorAll('.tab')) {
+    tab.addEventListener('click', () => showView(tab.dataset.view));
+  }
 
   try {
     applyState(await request('/api/state'));
-    renderRunners();
-    renderCards();
+    refreshRunnerViews();
   } catch (err) {
     showMessage(`Falha ao carregar participantes: ${err.message}`);
   }
