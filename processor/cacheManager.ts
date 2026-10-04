@@ -13,7 +13,10 @@ type CacheFile = Record<string, CacheEntry>;
 export const CACHE_PATH = path.resolve('data', '.image-cache.json');
 
 export function computeHash(imagePath: string): string {
-  const buffer = fs.readFileSync(imagePath);
+  return computeHashFromBuffer(fs.readFileSync(imagePath));
+}
+
+export function computeHashFromBuffer(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 

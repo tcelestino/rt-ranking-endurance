@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backoffice — Ranking Endurance</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Backoffice</h1>
+      <p class="header-month" id="month-label">Carregando…</p>
+    </header>
+
+    <p class="message" id="message" hidden></p>
+
+    <main class="layout">
+      <aside class="runners">
+        <section>
+          <h2>Feminino</h2>
+          <ul class="runner-list" id="list-female"></ul>
+        </section>
+        <section>
+          <h2>Masculino</h2>
+          <ul class="runner-list" id="list-male"></ul>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <p class="empty" id="empty">Marque os participantes que serão atualizados.</p>
+        <div id="cards"></div>
+      </section>
+    </main>
+
+    <footer class="actions" id="actions" hidden>
+      <div class="actions-buttons" id="actions-buttons">
+        <button type="button" id="analyze-btn">Analisar imagens</button>
+        <button type="button" class="primary" id="review-btn">Revisar e salvar</button>
+      </div>
+      <div class="confirm" id="confirm" hidden>
+        <h3>Confirmar atualização de <span id="confirm-month"></span></h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Participante</th>
+              <th>Novos km</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="confirm-body"></tbody>
+        </table>
+        <div class="actions-buttons">
+          <button type="button" id="cancel-btn">Voltar</button>
+          <button type="button" class="primary" id="save-btn">Confirmar e salvar</button>
+        </div>
+      </div>
+    </footer>
+
+    <template id="card-template">
+      <article class="card">
+        <header class="card-header">
+          <h3 class="card-name"></h3>
+          <span class="card-total"></span>
+        </header>
+        <label class="dropzone">
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+          <span>Arraste as imagens aqui ou clique para escolher</span>
+        </label>
+        <ul class="images"></ul>
+      </article>
+    </template>
+
+    <template id="image-template">
+      <li class="image">
+        <img alt="" />
+        <div class="image-info">
+          <span class="image-name"></span>
+          <label class="image-km">
+            <input type="number" step="0.01" min="0" placeholder="km" />
+            <span>km</span>
+          </label>
+          <span class="image-status"></span>
+        </div>
+        <button type="button" class="image-remove" aria-label="Remover imagem">×</button>
+      </li>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

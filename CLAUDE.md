@@ -13,6 +13,8 @@ npm run serve        # sobe servidor estático da pasta static/ na porta 3000
 npm run build        # compila TypeScript (processor/) para dist/
 npm run api:dev      # inicia a API em modo dev na porta 3001
 npm run api:build    # compila a API para api/dist/
+npm run backoffice   # sobe o backoffice local em localhost:3002 (Workers AI)
+npm run backoffice:check # verifica tipos do backoffice
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
@@ -31,9 +33,15 @@ rt-ranking-endurance/
 │   └── assets/
 │       ├── app.js
 │       └── style.css
+├── backoffice/                 # Interface local (não deployado)
+│   ├── src/server.ts
+│   ├── public/                 # index.html, app.js, style.css
+│   └── tsconfig.json           # noEmit, inclui ../processor
 ├── processor/                  # CLI local (não deployado)
 │   ├── index.ts
 │   ├── imageAnalyzerGemini.ts
+│   ├── imageAnalyzerCloudflare.ts
+│   ├── kmPrompt.ts
 │   ├── jsonUpdater.ts
 │   ├── participantsParser.ts
 │   ├── imageFiles.ts
@@ -51,7 +59,7 @@ rt-ranking-endurance/
 
 ## Arquitetura
 
-O projeto tem três partes independentes:
+O projeto tem quatro partes independentes:
 
 ### Fluxo 1 — `npm run update` (processamento de imagens)
 
@@ -75,6 +83,17 @@ O projeto tem três partes independentes:
 
 **`processor/manifest.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
 - `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
+
+### Backoffice — `npm run backoffice`
+
+**`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
+- `GET /api/state` → participantes de `runners.json` com km/total do mês atual
+- `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, hash, cached }` (não grava nada)
+- `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
+
+**`processor/imageAnalyzerCloudflare.ts`** — chama a REST API do Workers AI (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AI_MODEL` opcional; padrão `@cf/meta/llama-3.2-11b-vision-instruct`, que exige aceite único da licença Meta com `{"prompt":"agree"}`).
+
+**`processor/kmPrompt.ts`** — prompt e `parseKmResponse` compartilhados entre Gemini e Cloudflare.
 
 ### API — `api/src/server.ts`
 
@@ -113,7 +132,7 @@ Página estática deployada no Render. Carrega dados via `fetch()` para a API (`
 
 ## Arquivos sensíveis
 
-- `.env` — variáveis de ambiente com API keys (`GEMINI_API_KEY`) (nunca commitar)
+- `.env` — variáveis de ambiente com API keys (`GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`) (nunca commitar)
 
 Devem estar no `.gitignore`.
 

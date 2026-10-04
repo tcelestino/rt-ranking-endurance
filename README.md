@@ -46,7 +46,13 @@ rt-ranking-endurance/
 │   ├── manifest.ts               # Gera o data/manifest.json
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
+│   ├── imageAnalyzerCloudflare.ts # Workers AI (Cloudflare): extrai km da imagem (backoffice)
+│   ├── kmPrompt.ts               # Prompt e parse do km compartilhados pelos analisadores
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
+├── backoffice/                   # Interface local para atualizar os dados (não deployado)
+│   ├── src/server.ts             # Express em localhost:3002
+│   ├── public/                   # HTML/CSS/JS da interface
+│   └── tsconfig.json
 ├── data/
 │   ├── runners.json              # Lista de participantes por gênero
 │   ├── manifest.json             # Meses disponíveis (gerado por npm run generate:manifest)
@@ -89,12 +95,40 @@ cp .env.example .env
 |---|---|
 | `GEMINI_API_KEY` | Chave da API Google Gemini (obrigatória) |
 | `CURRENT_MONTH` | Sobrescreve o mês atual (opcional, ex: `4` para abril) |
+| `CLOUDFLARE_ACCOUNT_ID` | ID da conta Cloudflare (obrigatória para o backoffice) |
+| `CLOUDFLARE_API_TOKEN` | Token com permissão Workers AI (obrigatória para o backoffice) |
+| `CLOUDFLARE_AI_MODEL` | Modelo de visão do Workers AI (opcional, padrão `@cf/meta/llama-3.2-11b-vision-instruct`) |
+| `BACKOFFICE_PORT` | Porta do backoffice (opcional, padrão `3002`) |
 
 ## Configurando o API Gemini
 
 Para usar o processamento das imagens, é preciso adicionar sua chave da API do Gemini.
 
 Para obter a chave, acesse o [https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br](https://ai.google.dev/gemini-api/docs/api-key?hl=pt-br)
+
+## Backoffice (Cloudflare Workers AI)
+
+Alternativa ao `npm run update`: interface local para marcar participantes, anexar os prints (Strava, Nike Run etc.), analisar com o Workers AI, revisar o km e salvar no JSON do mês vigente.
+
+Na primeira vez, aceite a licença do modelo Llama 3.2 Vision (exigência da Meta):
+
+```bash
+curl https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run/@cf/meta/llama-3.2-11b-vision-instruct \
+  -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -d '{ "prompt": "agree" }'
+```
+
+Depois:
+
+```bash
+npm run backoffice   # abre em http://localhost:3002
+```
+
+1. Marque os participantes que serão atualizados.
+2. Arraste as imagens de cada um para o card correspondente.
+3. Clique em **Analisar imagens** e confira/corrija os km extraídos.
+4. Clique em **Revisar e salvar**, confira o resumo e confirme.
+
+Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sinalizadas e ignoradas. Depois de salvar, siga com os passos 2 e 3 do fluxo normal abaixo.
 
 ## Atualizando os dados do ranking
 
