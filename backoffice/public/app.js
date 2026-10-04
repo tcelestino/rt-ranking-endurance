@@ -2,6 +2,7 @@ const state = {
   month: null,
   monthName: '',
   year: null,
+  manifestCurrent: true,
   participants: [],
   // nome do participante -> lista de imagens anexadas
   selected: new Map(),
@@ -387,6 +388,48 @@ async function removeRunner(name, button) {
   }
 }
 
+// ---------- Novo mês ----------
+
+function renderNewMonthButton() {
+  const btn = $('new-month-btn');
+  btn.classList.toggle('attention', !state.manifestCurrent);
+  btn.title = state.manifestCurrent
+    ? `Manifest de ${state.monthName}/${state.year} já gerado`
+    : `Manifest de ${state.monthName}/${state.year} ainda não foi gerado`;
+}
+
+function openNewMonth() {
+  clearMessage();
+  if (state.manifestCurrent) {
+    closeNewMonth();
+    showMessage(`O manifest de ${state.monthName}/${state.year} já foi gerado. Nada a fazer.`, 'info');
+    return;
+  }
+  $('new-month-label').textContent = `${state.monthName}/${state.year}`;
+  $('new-month-panel').hidden = false;
+}
+
+function closeNewMonth() {
+  $('new-month-panel').hidden = true;
+}
+
+async function startNewMonth() {
+  clearMessage();
+  $('new-month-confirm').disabled = true;
+  try {
+    const { createdFiles, state: newState } = await postJson('/api/new-month', {});
+    applyState(newState);
+    refreshRunnerViews();
+    closeNewMonth();
+    const created = createdFiles.length > 0 ? `Arquivos criados: ${createdFiles.join(', ')}.` : 'Os JSONs do mês já existiam.';
+    showMessage(`Manifest gerado e cache limpo. ${created} Publique para enviar as alterações.`, 'success');
+  } catch (err) {
+    showMessage(err.message);
+  } finally {
+    $('new-month-confirm').disabled = false;
+  }
+}
+
 // ---------- Navegação ----------
 
 function showView(view) {
@@ -406,6 +449,8 @@ function applyState(data) {
   state.monthName = data.monthName;
   state.year = data.year;
   state.participants = data.participants;
+  state.manifestCurrent = data.manifestCurrent;
+  renderNewMonthButton();
   $('month-label').textContent = `Mês vigente: ${data.monthName}/${data.year}`;
 }
 
@@ -415,6 +460,9 @@ async function init() {
   $('cancel-btn').addEventListener('click', closeConfirm);
   $('save-btn').addEventListener('click', save);
   $('runner-form').addEventListener('submit', addRunner);
+  $('new-month-btn').addEventListener('click', openNewMonth);
+  $('new-month-cancel').addEventListener('click', closeNewMonth);
+  $('new-month-confirm').addEventListener('click', startNewMonth);
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }

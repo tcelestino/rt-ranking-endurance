@@ -2,8 +2,9 @@ import 'dotenv/config';
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
-import { computeHashFromBuffer, getCached, storeCache } from '../../processor/cacheManager';
+import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
+import { generateManifest, isManifestCurrent } from '../../processor/manifest';
 import {
   addParticipant,
   findParticipant,
@@ -60,7 +61,13 @@ async function buildState() {
     }
   }
 
-  return { month, monthName: getMonthName(month), year: new Date().getFullYear(), participants: result };
+  return {
+    month,
+    monthName: getMonthName(month),
+    year: new Date().getFullYear(),
+    manifestCurrent: isManifestCurrent(),
+    participants: result,
+  };
 }
 
 app.get('/api/state', async (_req, res, next) => {
@@ -161,6 +168,20 @@ app.delete('/api/runners/:name', async (req, res, next) => {
     removeParticipant(participants, canonicalName);
     saveParticipants(participants);
     res.json(await buildState());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/new-month', async (_req, res, next) => {
+  try {
+    if (isManifestCurrent()) {
+      const month = getCurrentMonth();
+      throw new HttpError(409, `O manifest de ${getMonthName(month)}/${new Date().getFullYear()} já foi gerado`);
+    }
+    removeCache();
+    const { createdFiles } = generateManifest();
+    res.json({ createdFiles, state: await buildState() });
   } catch (err) {
     next(err);
   }

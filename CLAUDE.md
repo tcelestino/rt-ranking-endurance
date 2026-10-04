@@ -92,6 +92,11 @@ O projeto tem quatro partes independentes:
 - `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
 - `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)
 - `DELETE /api/runners/:name` → remove de `runners.json` (JSONs mensais não são alterados)
+- `POST /api/new-month` → `removeCache` + `generateManifest` (cria JSONs do mês vigente se não existirem e regrava `manifest.json`); retorna `{ createdFiles, state }`. Responde 409 se o manifest já estiver no mês vigente (`isManifestCurrent`), evitando limpar o cache à toa
+
+`GET /api/state` também retorna `manifestCurrent`, usado para destacar o botão "Novo mês" ou avisar que o manifest já foi gerado.
+
+Scripts do `processor/` reaproveitados pelo backoffice exportam a função principal e só executam `main()` com `if (require.main === module)`.
 
 **`processor/imageAnalyzerCloudflare.ts`** — chama a REST API do Workers AI (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AI_MODEL` opcional; padrão `@cf/meta/llama-3.2-11b-vision-instruct`, que exige aceite único da licença Meta com `{"prompt":"agree"}`).
 

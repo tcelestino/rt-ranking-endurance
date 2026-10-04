@@ -132,6 +132,8 @@ Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sin
 
 Na aba **Participantes** é possível adicionar (informando o gênero) ou remover corredores de `data/runners.json`. A remoção não altera os JSONs mensais; o corredor apenas deixa de aparecer nos rankings.
 
+O botão **Novo mês** (no topo) equivale ao `npm run clear:cache` + `npm run generate:manifest`: cria os JSONs do mês vigente e atualiza o `manifest.json`. Ele fica destacado enquanto o manifest do mês vigente não for gerado; se já tiver sido gerado, o botão apenas exibe um aviso. Depois, publique as alterações normalmente.
+
 ## Atualizando os dados do ranking
 
 Fluxo completo para atualizar os dados de corrida e publicar no ranking.
