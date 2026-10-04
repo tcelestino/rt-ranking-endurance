@@ -25,8 +25,15 @@ export async function extractKmFromImageBuffer(buffer: Buffer, mimeType: string)
     method: 'POST',
     headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      messages: [{ role: 'user', content: KM_PROMPT }],
-      image: `data:${mimeType};base64,${buffer.toString('base64')}`,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: KM_PROMPT },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${buffer.toString('base64')}` } },
+          ],
+        },
+      ],
       max_tokens: 20,
     }),
   });
