@@ -88,6 +88,7 @@ O projeto tem quatro partes independentes:
 
 **`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual
+- `GET /api/ranking?year=&month=` → `{ year, month, monthName, current, periods, female, male, annual, totals }` via `processor/ranking.ts`. Sem parâmetros usa o mês vigente (ou o período mais recente com dados); `periods` lista anos/meses existentes em `data/`; 404 para período sem dados
 - `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, hash, cached }` (não grava nada)
 - `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
 - `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)
@@ -99,6 +100,8 @@ O projeto tem quatro partes independentes:
 Scripts do `processor/` reaproveitados pelo backoffice exportam a função principal e só executam `main()` com `if (require.main === module)`.
 
 **`processor/imageAnalyzerCloudflare.ts`** — chama a REST API do Workers AI (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AI_MODEL` opcional; padrão `@cf/meta/llama-3.2-11b-vision-instruct`, que exige aceite único da licença Meta com `{"prompt":"agree"}`).
+
+**`processor/ranking.ts`** — cálculo dos rankings mensal/anual (por ano), `listRankingPeriods` e montagem do texto do ranking (`buildRankingMarkdown`); usado por `markdownGenerator.ts` e pelo backoffice.
 
 **`processor/kmPrompt.ts`** — prompt e `parseKmResponse` compartilhados entre Gemini e Cloudflare.
 
@@ -135,7 +138,7 @@ Página estática deployada no Render. Carrega dados via `fetch()` para a API (`
 ## Lógica de ranking
 
 - **Mensal**: soma os km do JSON do mês atual para cada gênero, ordena desc, inclui corredores com 0km
-- **Anual**: agrega todos os arquivos de `data/` (todos os meses, ambos os gêneros), ordena desc
+- **Anual**: agrega todos os meses do ano em `data/{ano}/` (ambos os gêneros), ordena desc
 
 ## Arquivos sensíveis
 

@@ -6,13 +6,20 @@ import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../..
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
 import { generateManifest, isManifestCurrent } from '../../processor/manifest';
 import {
+  calcAnnualRanking,
+  calcMonthlyRanking,
+  calcTotalKm,
+  listRankingPeriods,
+  MONTH_DISPLAY,
+} from '../../processor/ranking';
+import {
   addParticipant,
   findParticipant,
   loadParticipants,
   removeParticipant,
   saveParticipants,
 } from '../../processor/participantsParser';
-import { getCurrentMonth } from '../../processor/utils';
+import { capitalizeFirstLetter, getCurrentMonth } from '../../processor/utils';
 
 type Gender = 'female' | 'male';
 
@@ -73,6 +80,58 @@ async function buildState() {
 app.get('/api/state', async (_req, res, next) => {
   try {
     res.json(await buildState());
+  } catch (err) {
+    next(err);
+  }
+});
+
+function displayMonthName(month: number): string {
+  return capitalizeFirstLetter(MONTH_DISPLAY[getMonthName(month)]);
+}
+
+function parsePeriodParam(value: unknown, label: string, fallback: number): number {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) throw new HttpError(400, `${label} inválido: ${value}`);
+  return parsed;
+}
+
+app.get('/api/ranking', (req, res, next) => {
+  try {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = getCurrentMonth();
+    const periods = listRankingPeriods();
+    const hasData = (y: number, m: number) => periods.some((p) => p.year === y && p.months.includes(m));
+
+    let year = parsePeriodParam(req.query.year, 'Ano', currentYear);
+    let month = parsePeriodParam(req.query.month, 'Mês', currentMonth);
+    const explicit = req.query.year !== undefined || req.query.month !== undefined;
+
+    if (!hasData(year, month)) {
+      // sem filtro explícito (ex.: dia 1 antes do novo mês), exibe o período mais recente com dados
+      const latest = periods[periods.length - 1];
+      if (explicit || !latest) throw new HttpError(404, `Não há dados para ${month}/${year}`);
+      year = latest.year;
+      month = latest.months[latest.months.length - 1];
+    }
+
+    const female = calcMonthlyRanking('female', month, year);
+    const male = calcMonthlyRanking('male', month, year);
+    const annual = calcAnnualRanking(year);
+    res.json({
+      year,
+      month,
+      monthName: displayMonthName(month),
+      current: { year: currentYear, month: currentMonth },
+      periods: periods.map((p) => ({
+        year: p.year,
+        months: p.months.map((m) => ({ month: m, monthName: displayMonthName(m) })),
+      })),
+      female,
+      male,
+      annual,
+      totals: { female: calcTotalKm(female), male: calcTotalKm(male), annual: calcTotalKm(annual) },
+    });
   } catch (err) {
     next(err);
   }

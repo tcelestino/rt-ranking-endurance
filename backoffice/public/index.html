@@ -28,13 +28,49 @@
     </section>
 
     <nav class="tabs" id="tabs">
-      <button type="button" class="tab active" data-view="update">Atualizar km</button>
+      <button type="button" class="tab active" data-view="ranking">Ranking</button>
+      <button type="button" class="tab" data-view="update">Atualizar km</button>
       <button type="button" class="tab" data-view="runners">Participantes</button>
     </nav>
 
     <p class="message" id="message" hidden></p>
 
-    <div class="view" id="view-update">
+    <div class="view" id="view-ranking">
+      <form class="ranking-filters" id="ranking-filters" aria-label="Período do ranking">
+        <label>
+          <span>Mês</span>
+          <select id="ranking-month-select"></select>
+        </label>
+        <label>
+          <span>Ano</span>
+          <select id="ranking-year-select"></select>
+        </label>
+        <div class="ranking-nav">
+          <button type="button" id="ranking-prev" aria-label="Mês anterior" title="Mês anterior">‹</button>
+          <button type="button" id="ranking-next" aria-label="Próximo mês" title="Próximo mês">›</button>
+          <button type="button" id="ranking-current">Mês vigente</button>
+        </div>
+      </form>
+
+      <h2 class="ranking-title" id="ranking-title" aria-live="polite"></h2>
+
+      <div class="ranking-grid">
+        <section class="ranking-card" aria-labelledby="ranking-female-title">
+          <h3 id="ranking-female-title">Feminino</h3>
+          <table class="ranking-table" id="ranking-female"></table>
+        </section>
+        <section class="ranking-card" aria-labelledby="ranking-male-title">
+          <h3 id="ranking-male-title">Masculino</h3>
+          <table class="ranking-table" id="ranking-male"></table>
+        </section>
+        <section class="ranking-card ranking-annual" aria-labelledby="ranking-annual-title">
+          <h3 id="ranking-annual-title">Anual — <span id="ranking-year"></span></h3>
+          <table class="ranking-table" id="ranking-annual"></table>
+        </section>
+      </div>
+    </div>
+
+    <div class="view" id="view-update" hidden>
       <main class="layout">
         <aside class="runners">
           <section>
