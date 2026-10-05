@@ -436,28 +436,36 @@ async function startNewMonth() {
 
 const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
+function rankingRow(cells, className) {
+  const tr = document.createElement('tr');
+  if (className) tr.className = className;
+  for (const cell of cells) {
+    const td = document.createElement('td');
+    td.textContent = cell.text;
+    if (cell.colSpan) td.colSpan = cell.colSpan;
+    tr.append(td);
+  }
+  return tr;
+}
+
 function renderRankingTable(table, runners, total) {
   table.replaceChildren();
-  for (const r of runners) {
-    const tr = document.createElement('tr');
-    if (r.km === 0) tr.className = 'zero';
-    const cells = [`${r.position}º`, `${MEDALS[r.position] ?? ''} ${r.name}`.trim(), formatKm(r.km)];
-    for (const text of cells) {
-      const td = document.createElement('td');
-      td.textContent = text;
-      tr.append(td);
-    }
-    table.append(tr);
+  const active = runners.filter((r) => r.km > 0);
+  for (const r of active) {
+    const name = `${MEDALS[r.position] ?? ''} ${r.name}`.trim();
+    table.append(rankingRow([{ text: `${r.position}º` }, { text: name }, { text: formatKm(r.km) }]));
   }
+  if (active.length === 0) {
+    table.append(rankingRow([{ text: 'Nenhum km registrado', colSpan: 3 }], 'empty-row'));
+  }
+
   const tfoot = document.createElement('tfoot');
-  const tr = document.createElement('tr');
-  const label = document.createElement('td');
-  label.colSpan = 2;
-  label.textContent = 'Total';
-  const value = document.createElement('td');
-  value.textContent = formatKm(total);
-  tr.append(label, value);
-  tfoot.append(tr);
+  tfoot.append(rankingRow([{ text: 'Total', colSpan: 2 }, { text: formatKm(total) }]));
+  const inactive = runners.length - active.length;
+  if (inactive > 0) {
+    const label = inactive === 1 ? '1 participante sem km' : `${inactive} participantes sem km`;
+    tfoot.append(rankingRow([{ text: label, colSpan: 3 }], 'inactive-row'));
+  }
   table.append(tfoot);
 }
 

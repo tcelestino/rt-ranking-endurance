@@ -131,7 +131,7 @@ npm run backoffice   # abre em http://localhost:3002
 
 Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sinalizadas e ignoradas. Depois de salvar, siga com os passos 2 e 3 do fluxo normal abaixo.
 
-A aba **Ranking** é a tela inicial: mostra o ranking do mês (feminino e masculino) e, abaixo, o ranking anual, com os mesmos números do `output/ranking.md`. Os filtros de mês e ano (e os botões de mês anterior/próximo/vigente) permitem consultar qualquer período com dados em `data/`.
+A aba **Ranking** é a tela inicial: mostra o ranking do mês (feminino e masculino) e, abaixo, o ranking anual, com os mesmos números do `output/ranking.md`. Participantes sem km no período não são listados; o rodapé de cada tabela informa quantos são. Os filtros de mês e ano (e os botões de mês anterior/próximo/vigente) permitem consultar qualquer período com dados em `data/`.
 
 Na aba **Participantes** é possível adicionar (informando o gênero) ou remover corredores de `data/runners.json`. A remoção não altera os JSONs mensais; o corredor apenas deixa de aparecer nos rankings.
 

@@ -588,8 +588,19 @@ input:focus-visible {
   color: var(--color-accent);
 }
 
-.ranking-table tr.zero td {
-  color: var(--color-zero);
+.ranking-table tr.empty-row td {
+  width: auto;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 16px 4px;
+}
+
+.ranking-table tfoot tr.inactive-row td {
+  width: auto;
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: 13px;
+  text-align: left;
 }
 
 .ranking-table tfoot td,
