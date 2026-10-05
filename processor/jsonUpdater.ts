@@ -32,9 +32,8 @@ export function getMonthName(month: number): string {
   return name;
 }
 
-export function getDataFilePath(gender: 'female' | 'male', month: number): string {
+export function getDataFilePath(gender: 'female' | 'male', month: number, year = getFullYear()): string {
   const monthStr = getMonthName(month);
-  const year = getFullYear();
 
   return path.resolve(process.cwd(), 'data', year.toString(), `${gender}-${monthStr}.json`);
 }
@@ -50,8 +49,12 @@ export async function loadMonthData(gender: 'female' | 'male', month: number): P
   }
 }
 
-export function loadMonthDataSync(gender: 'female' | 'male', month: number): ParticipantRecord[] {
-  const filePath = getDataFilePath(gender, month);
+export function loadMonthDataSync(
+  gender: 'female' | 'male',
+  month: number,
+  year = getFullYear(),
+): ParticipantRecord[] {
+  const filePath = getDataFilePath(gender, month, year);
   if (!fs.existsSync(filePath)) return [];
   return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
 }

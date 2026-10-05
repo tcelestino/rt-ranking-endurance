@@ -8,6 +8,8 @@ const state = {
   selected: new Map(),
   // participante aguardando confirmação de remoção
   pendingRemoval: null,
+  // período exibido na aba Ranking
+  ranking: { year: null, month: null, periods: [], current: null },
 };
 
 let nextImageId = 1;
@@ -430,6 +432,94 @@ async function startNewMonth() {
   }
 }
 
+// ---------- Ranking ----------
+
+const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+function rankingRow(cells, className) {
+  const tr = document.createElement('tr');
+  if (className) tr.className = className;
+  for (const cell of cells) {
+    const td = document.createElement('td');
+    td.textContent = cell.text;
+    if (cell.colSpan) td.colSpan = cell.colSpan;
+    tr.append(td);
+  }
+  return tr;
+}
+
+function renderRankingTable(table, runners, total) {
+  table.replaceChildren();
+  const active = runners.filter((r) => r.km > 0);
+  for (const r of active) {
+    const name = `${MEDALS[r.position] ?? ''} ${r.name}`.trim();
+    table.append(rankingRow([{ text: `${r.position}º` }, { text: name }, { text: formatKm(r.km) }]));
+  }
+  if (active.length === 0) {
+    table.append(rankingRow([{ text: 'Nenhum km registrado', colSpan: 3 }], 'empty-row'));
+  }
+
+  const tfoot = document.createElement('tfoot');
+  tfoot.append(rankingRow([{ text: 'Total', colSpan: 2 }, { text: formatKm(total) }]));
+  const inactive = runners.length - active.length;
+  if (inactive > 0) {
+    const label = inactive === 1 ? '1 participante sem km' : `${inactive} participantes sem km`;
+    tfoot.append(rankingRow([{ text: label, colSpan: 3 }], 'inactive-row'));
+  }
+  table.append(tfoot);
+}
+
+function rankingTimeline() {
+  return state.ranking.periods.flatMap((p) => p.months.map((m) => ({ year: p.year, month: m.month })));
+}
+
+function renderRankingFilters() {
+  const { year, month, periods, current } = state.ranking;
+
+  const yearSelect = $('ranking-year-select');
+  yearSelect.replaceChildren(...periods.map((p) => new Option(p.year, p.year, false, p.year === year)));
+
+  const monthSelect = $('ranking-month-select');
+  const months = periods.find((p) => p.year === year)?.months ?? [];
+  monthSelect.replaceChildren(...months.map((m) => new Option(m.monthName, m.month, false, m.month === month)));
+
+  const timeline = rankingTimeline();
+  const index = timeline.findIndex((t) => t.year === year && t.month === month);
+  $('ranking-prev').disabled = index <= 0;
+  $('ranking-next').disabled = index === -1 || index >= timeline.length - 1;
+  $('ranking-current').disabled = year === current.year && month === current.month;
+}
+
+async function loadRanking(year, month) {
+  const params = year && month ? `?year=${year}&month=${month}` : '';
+  try {
+    const data = await request(`/api/ranking${params}`);
+    state.ranking = { year: data.year, month: data.month, periods: data.periods, current: data.current };
+    renderRankingFilters();
+    $('ranking-title').textContent = `Ranking de ${data.monthName}/${data.year}`;
+    $('ranking-year').textContent = data.year;
+    renderRankingTable($('ranking-female'), data.female, data.totals.female);
+    renderRankingTable($('ranking-male'), data.male, data.totals.male);
+    renderRankingTable($('ranking-annual'), data.annual, data.totals.annual);
+  } catch (err) {
+    showMessage(`Falha ao carregar ranking: ${err.message}`);
+  }
+}
+
+function changeRankingYear() {
+  const year = Number($('ranking-year-select').value);
+  const months = state.ranking.periods.find((p) => p.year === year).months;
+  const sameMonth = months.find((m) => m.month === state.ranking.month);
+  loadRanking(year, (sameMonth ?? months[months.length - 1]).month);
+}
+
+function stepRanking(offset) {
+  const timeline = rankingTimeline();
+  const index = timeline.findIndex((t) => t.year === state.ranking.year && t.month === state.ranking.month);
+  const target = timeline[index + offset];
+  if (target) loadRanking(target.year, target.month);
+}
+
 // ---------- Navegação ----------
 
 function showView(view) {
@@ -440,6 +530,7 @@ function showView(view) {
   for (const el of document.querySelectorAll('.view')) {
     el.hidden = el.id !== `view-${view}`;
   }
+  if (view === 'ranking') loadRanking(state.ranking.year, state.ranking.month);
 }
 
 // ---------- Inicialização ----------
@@ -463,6 +554,14 @@ async function init() {
   $('new-month-btn').addEventListener('click', openNewMonth);
   $('new-month-cancel').addEventListener('click', closeNewMonth);
   $('new-month-confirm').addEventListener('click', startNewMonth);
+  $('ranking-year-select').addEventListener('change', changeRankingYear);
+  $('ranking-month-select').addEventListener('change', () =>
+    loadRanking(state.ranking.year, Number($('ranking-month-select').value)),
+  );
+  $('ranking-prev').addEventListener('click', () => stepRanking(-1));
+  $('ranking-next').addEventListener('click', () => stepRanking(1));
+  $('ranking-current').addEventListener('click', () => loadRanking());
+  $('ranking-filters').addEventListener('submit', (e) => e.preventDefault());
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }
@@ -473,6 +572,7 @@ async function init() {
   } catch (err) {
     showMessage(`Falha ao carregar participantes: ${err.message}`);
   }
+  await loadRanking();
 }
 
 init();

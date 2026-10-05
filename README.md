@@ -48,6 +48,7 @@ rt-ranking-endurance/
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   ├── imageAnalyzerCloudflare.ts # Workers AI (Cloudflare): extrai km da imagem (backoffice)
 │   ├── kmPrompt.ts               # Prompt e parse do km compartilhados pelos analisadores
+│   ├── ranking.ts                # Cálculo dos rankings mensal/anual e texto do ranking
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
 ├── backoffice/                   # Interface local para atualizar os dados (não deployado)
 │   ├── src/server.ts             # Express em localhost:3002
@@ -129,6 +130,8 @@ npm run backoffice   # abre em http://localhost:3002
 4. Clique em **Revisar e salvar**, confira o resumo e confirme.
 
 Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sinalizadas e ignoradas. Depois de salvar, siga com os passos 2 e 3 do fluxo normal abaixo.
+
+A aba **Ranking** é a tela inicial: mostra o ranking do mês (feminino e masculino) e, abaixo, o ranking anual, com os mesmos números do `output/ranking.md`. Participantes sem km no período não são listados; o rodapé de cada tabela informa quantos são. Os filtros de mês e ano (e os botões de mês anterior/próximo/vigente) permitem consultar qualquer período com dados em `data/`.
 
 Na aba **Participantes** é possível adicionar (informando o gênero) ou remover corredores de `data/runners.json`. A remoção não altera os JSONs mensais; o corredor apenas deixa de aparecer nos rankings.
 
