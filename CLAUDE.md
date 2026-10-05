@@ -88,7 +88,7 @@ O projeto tem quatro partes independentes:
 
 **`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual
-- `GET /api/ranking?year=&month=` → `{ year, month, monthName, current, periods, female, male, annual, totals }` via `processor/ranking.ts`. Sem parâmetros usa o mês vigente (ou o período mais recente com dados); `periods` lista anos/meses existentes em `data/`; 404 para período sem dados
+- `GET /api/ranking?year=&month=` → `{ year, month, monthName, current, periods, female, male, annual, totals, markdown }` via `processor/ranking.ts`. Sem parâmetros usa o mês vigente (ou o período mais recente com dados); `periods` lista anos/meses existentes em `data/`; `markdown` é o texto do WhatsApp do período (`buildRankingMarkdown`); 404 para período sem dados
 - `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, hash, cached }` (não grava nada)
 - `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
 - `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)

@@ -6,6 +6,7 @@ import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../..
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
 import { generateManifest, isManifestCurrent } from '../../processor/manifest';
 import {
+  buildRankingMarkdown,
   calcAnnualRanking,
   calcMonthlyRanking,
   calcTotalKm,
@@ -131,6 +132,7 @@ app.get('/api/ranking', (req, res, next) => {
       male,
       annual,
       totals: { female: calcTotalKm(female), male: calcTotalKm(male), annual: calcTotalKm(annual) },
+      markdown: buildRankingMarkdown(month, year),
     });
   } catch (err) {
     next(err);

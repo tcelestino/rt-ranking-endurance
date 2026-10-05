@@ -52,7 +52,10 @@
         </div>
       </form>
 
-      <h2 class="ranking-title" id="ranking-title" aria-live="polite"></h2>
+      <div class="ranking-header">
+        <h2 class="ranking-title" id="ranking-title" aria-live="polite"></h2>
+        <button type="button" class="primary" id="copy-ranking-btn">Copiar para WhatsApp</button>
+      </div>
 
       <div class="ranking-grid">
         <section class="ranking-card" aria-labelledby="ranking-female-title">
@@ -68,6 +71,11 @@
           <table class="ranking-table" id="ranking-annual"></table>
         </section>
       </div>
+
+      <details class="ranking-preview">
+        <summary>Prévia do texto para WhatsApp</summary>
+        <pre id="ranking-markdown"></pre>
+      </details>
     </div>
 
     <div class="view" id="view-update" hidden>

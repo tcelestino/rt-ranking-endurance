@@ -9,7 +9,7 @@ const state = {
   // participante aguardando confirmação de remoção
   pendingRemoval: null,
   // período exibido na aba Ranking
-  ranking: { year: null, month: null, periods: [], current: null },
+  ranking: { year: null, month: null, periods: [], current: null, markdown: '' },
 };
 
 let nextImageId = 1;
@@ -494,7 +494,14 @@ async function loadRanking(year, month) {
   const params = year && month ? `?year=${year}&month=${month}` : '';
   try {
     const data = await request(`/api/ranking${params}`);
-    state.ranking = { year: data.year, month: data.month, periods: data.periods, current: data.current };
+    state.ranking = {
+      year: data.year,
+      month: data.month,
+      periods: data.periods,
+      current: data.current,
+      markdown: data.markdown,
+    };
+    $('ranking-markdown').textContent = data.markdown;
     renderRankingFilters();
     $('ranking-title').textContent = `Ranking de ${data.monthName}/${data.year}`;
     $('ranking-year').textContent = data.year;
@@ -503,6 +510,20 @@ async function loadRanking(year, month) {
     renderRankingTable($('ranking-annual'), data.annual, data.totals.annual);
   } catch (err) {
     showMessage(`Falha ao carregar ranking: ${err.message}`);
+  }
+}
+
+async function copyRanking() {
+  clearMessage();
+  const btn = $('copy-ranking-btn');
+  try {
+    await navigator.clipboard.writeText(state.ranking.markdown);
+    btn.textContent = 'Copiado!';
+    setTimeout(() => {
+      btn.textContent = 'Copiar para WhatsApp';
+    }, 2000);
+  } catch (err) {
+    showMessage(`Não foi possível copiar: ${err.message}`);
   }
 }
 
@@ -562,6 +583,7 @@ async function init() {
   $('ranking-next').addEventListener('click', () => stepRanking(1));
   $('ranking-current').addEventListener('click', () => loadRanking());
   $('ranking-filters').addEventListener('submit', (e) => e.preventDefault());
+  $('copy-ranking-btn').addEventListener('click', copyRanking);
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }
