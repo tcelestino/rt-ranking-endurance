@@ -135,7 +135,9 @@ A aba **Ranking** é a tela inicial: mostra o ranking do mês (feminino e mascul
 
 Na aba **Participantes** é possível adicionar (informando o gênero) ou remover corredores de `data/runners.json`. A remoção não altera os JSONs mensais; o corredor apenas deixa de aparecer nos rankings.
 
-O botão **Novo mês** (no topo) equivale ao `npm run clear:cache` + `npm run generate:manifest`: cria os JSONs do mês vigente e atualiza o `manifest.json`. Ele fica destacado enquanto o manifest do mês vigente não for gerado; se já tiver sido gerado, o botão apenas exibe um aviso. Depois, publique as alterações normalmente.
+O botão **Novo mês** (no topo) equivale ao `npm run clear:cache` + `npm run generate:manifest`: cria os JSONs do mês vigente e atualiza o `manifest.json`. Ele fica destacado enquanto o manifest do mês vigente não for gerado; se já tiver sido gerado, o botão apenas exibe um aviso. Depois, publique as alterações.
+
+O botão **Publicar** (no topo, destacado quando há alterações em `data/`) equivale ao `npm run generate:markdown` + `npm run deploy`: lista os arquivos alterados, permite escolher se o PR terá merge automático e, ao final, mostra o link do PR, o log e um atalho para copiar o ranking para o WhatsApp. Requer o GitHub CLI (`gh`) autenticado e o backoffice rodando a partir da `main`.
 
 ## Atualizando os dados do ranking
 

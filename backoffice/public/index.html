@@ -11,7 +11,10 @@
       <h1>Backoffice</h1>
       <div class="header-actions">
         <p class="header-month" id="month-label">Carregando…</p>
-        <button type="button" id="new-month-btn">Novo mês</button>
+        <div class="header-buttons">
+          <button type="button" id="new-month-btn">Novo mês</button>
+          <button type="button" id="publish-btn">Publicar</button>
+        </div>
       </div>
     </header>
 
@@ -24,6 +27,36 @@
       <div class="actions-buttons">
         <button type="button" id="new-month-cancel">Cancelar</button>
         <button type="button" class="primary" id="new-month-confirm">Confirmar</button>
+      </div>
+    </section>
+
+    <section class="panel" id="publish-panel" hidden>
+      <h3>Publicar atualização</h3>
+      <p>
+        Gera o <code>output/ranking.md</code> e roda o <code>scripts/deploy.sh</code>: cria a branch, faz commit dos
+        arquivos abaixo e abre o PR no GitHub.
+      </p>
+      <ul class="publish-files" id="publish-files"></ul>
+      <label class="publish-merge">
+        <input type="checkbox" id="publish-auto-merge" checked />
+        Fazer merge automático do PR (squash)
+      </label>
+      <div class="actions-buttons">
+        <button type="button" id="publish-cancel">Cancelar</button>
+        <button type="button" class="primary" id="publish-confirm">Confirmar publicação</button>
+      </div>
+    </section>
+
+    <section class="panel" id="publish-result" hidden>
+      <h3 id="publish-result-title"></h3>
+      <p id="publish-result-pr" hidden>PR: <a id="publish-result-link" target="_blank" rel="noopener"></a></p>
+      <details>
+        <summary>Log da publicação</summary>
+        <pre id="publish-result-log"></pre>
+      </details>
+      <div class="actions-buttons">
+        <button type="button" id="publish-result-close">Fechar</button>
+        <button type="button" class="primary" id="publish-result-copy" hidden>Copiar para WhatsApp</button>
       </div>
     </section>
 

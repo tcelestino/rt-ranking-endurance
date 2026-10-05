@@ -95,6 +95,9 @@ O projeto tem quatro partes independentes:
 - `DELETE /api/runners/:name` → remove de `runners.json` (JSONs mensais não são alterados)
 - `POST /api/new-month` → `removeCache` + `generateManifest` (cria JSONs do mês vigente se não existirem e regrava `manifest.json`); retorna `{ createdFiles, state }`. Responde 409 se o manifest já estiver no mês vigente (`isManifestCurrent`), evitando limpar o cache à toa
 
+- `GET /api/publish/status` → `{ publishing, pendingChanges }` (arquivos alterados em `data/` segundo `git status`)
+- `POST /api/publish` `{ autoMerge }` → `writeRankingMarkdown` + `bash scripts/deploy.sh` (com `--no-merge` se `autoMerge` for falso, timeout de 5 min); retorna `{ log, prUrl, markdown }`. 409 sem alterações ou com publicação em andamento; 500 com `log` se o script falhar. Como o `deploy.sh` troca de branch, rode o backoffice a partir da `main`
+
 `GET /api/state` também retorna `manifestCurrent`, usado para destacar o botão "Novo mês" ou avisar que o manifest já foi gerado.
 
 Scripts do `processor/` reaproveitados pelo backoffice exportam a função principal e só executam `main()` com `if (require.main === module)`.
