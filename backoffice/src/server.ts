@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import { execFile } from 'child_process';
+import { clerkMiddleware } from '@clerk/express';
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { promisify } from 'util';
+import { assertClerkEnv, getUserSummary, requireAdmin } from './auth';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
@@ -50,9 +52,19 @@ const DEPLOY_TIMEOUT_MS = 5 * 60 * 1000;
 const execFileAsync = promisify(execFile);
 let publishing = false;
 
+const CLERK_PUBLISHABLE_KEY = assertClerkEnv();
+
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.resolve(__dirname, '../public')));
+
+// público: o frontend precisa da chave para carregar o Clerk antes do login
+app.get('/api/config', (_req, res) => {
+  res.json({ publishableKey: CLERK_PUBLISHABLE_KEY });
+});
+
+app.use(clerkMiddleware());
+app.use('/api', requireAdmin);
 
 function resolveParticipant(name: unknown) {
   if (typeof name !== 'string' || !name.trim()) throw new HttpError(400, 'Nome do participante é obrigatório');
@@ -87,7 +99,8 @@ async function buildState() {
 
 app.get('/api/state', async (_req, res, next) => {
   try {
-    res.json(await buildState());
+    const [state, user] = await Promise.all([buildState(), getUserSummary(res.locals.userId)]);
+    res.json({ ...state, user });
   } catch (err) {
     next(err);
   }

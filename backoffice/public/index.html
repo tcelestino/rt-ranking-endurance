@@ -7,172 +7,181 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="header">
+    <section class="auth" id="auth">
       <h1>Backoffice</h1>
-      <div class="header-actions">
-        <p class="header-month" id="month-label">Carregando…</p>
-        <div class="header-buttons">
-          <button type="button" id="new-month-btn">Novo mês</button>
-          <button type="button" id="publish-btn">Publicar</button>
+      <p class="auth-status" id="auth-status">Carregando…</p>
+      <div id="sign-in"></div>
+    </section>
+
+    <div id="app" hidden>
+      <header class="header">
+        <h1>Backoffice</h1>
+        <div class="header-actions">
+          <p class="header-month" id="month-label">Carregando…</p>
+          <div class="header-buttons">
+            <button type="button" id="new-month-btn">Novo mês</button>
+            <button type="button" id="publish-btn">Publicar</button>
+            <div id="user-button"></div>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <section class="panel" id="new-month-panel" hidden>
-      <h3>Iniciar <span id="new-month-label"></span></h3>
-      <p>
-        Gera o <code>manifest.json</code>, cria os JSONs do mês vigente (se ainda não existirem) e limpa o cache de
-        imagens. Depois, use a publicação para enviar as alterações.
-      </p>
-      <div class="actions-buttons">
-        <button type="button" id="new-month-cancel">Cancelar</button>
-        <button type="button" class="primary" id="new-month-confirm">Confirmar</button>
-      </div>
-    </section>
-
-    <section class="panel" id="publish-panel" hidden>
-      <h3>Publicar atualização</h3>
-      <p>
-        Gera o <code>output/ranking.md</code> e roda o <code>scripts/deploy.sh</code>: cria a branch, faz commit dos
-        arquivos abaixo e abre o PR no GitHub.
-      </p>
-      <ul class="publish-files" id="publish-files"></ul>
-      <label class="publish-merge">
-        <input type="checkbox" id="publish-auto-merge" checked />
-        Fazer merge automático do PR (squash)
-      </label>
-      <div class="actions-buttons">
-        <button type="button" id="publish-cancel">Cancelar</button>
-        <button type="button" class="primary" id="publish-confirm">Confirmar publicação</button>
-      </div>
-    </section>
-
-    <section class="panel" id="publish-result" hidden>
-      <h3 id="publish-result-title"></h3>
-      <p id="publish-result-pr" hidden>PR: <a id="publish-result-link" target="_blank" rel="noopener"></a></p>
-      <details>
-        <summary>Log da publicação</summary>
-        <pre id="publish-result-log"></pre>
-      </details>
-      <div class="actions-buttons">
-        <button type="button" id="publish-result-close">Fechar</button>
-        <button type="button" class="primary" id="publish-result-copy" hidden>Copiar para WhatsApp</button>
-      </div>
-    </section>
-
-    <nav class="tabs" id="tabs">
-      <button type="button" class="tab active" data-view="ranking">Ranking</button>
-      <button type="button" class="tab" data-view="update">Atualizar km</button>
-      <button type="button" class="tab" data-view="runners">Participantes</button>
-    </nav>
-
-    <p class="message" id="message" hidden></p>
-
-    <div class="view" id="view-ranking">
-      <form class="ranking-filters" id="ranking-filters" aria-label="Período do ranking">
-        <label>
-          <span>Mês</span>
-          <select id="ranking-month-select"></select>
-        </label>
-        <label>
-          <span>Ano</span>
-          <select id="ranking-year-select"></select>
-        </label>
-        <div class="ranking-nav">
-          <button type="button" id="ranking-prev" aria-label="Mês anterior" title="Mês anterior">‹</button>
-          <button type="button" id="ranking-next" aria-label="Próximo mês" title="Próximo mês">›</button>
-          <button type="button" id="ranking-current">Mês vigente</button>
+      <section class="panel" id="new-month-panel" hidden>
+        <h3>Iniciar <span id="new-month-label"></span></h3>
+        <p>
+          Gera o <code>manifest.json</code>, cria os JSONs do mês vigente (se ainda não existirem) e limpa o cache de
+          imagens. Depois, use a publicação para enviar as alterações.
+        </p>
+        <div class="actions-buttons">
+          <button type="button" id="new-month-cancel">Cancelar</button>
+          <button type="button" class="primary" id="new-month-confirm">Confirmar</button>
         </div>
-      </form>
+      </section>
 
-      <div class="ranking-header">
-        <h2 class="ranking-title" id="ranking-title" aria-live="polite"></h2>
-        <button type="button" class="primary" id="copy-ranking-btn">Copiar para WhatsApp</button>
+      <section class="panel" id="publish-panel" hidden>
+        <h3>Publicar atualização</h3>
+        <p>
+          Gera o <code>output/ranking.md</code> e roda o <code>scripts/deploy.sh</code>: cria a branch, faz commit dos
+          arquivos abaixo e abre o PR no GitHub.
+        </p>
+        <ul class="publish-files" id="publish-files"></ul>
+        <label class="publish-merge">
+          <input type="checkbox" id="publish-auto-merge" checked />
+          Fazer merge automático do PR (squash)
+        </label>
+        <div class="actions-buttons">
+          <button type="button" id="publish-cancel">Cancelar</button>
+          <button type="button" class="primary" id="publish-confirm">Confirmar publicação</button>
+        </div>
+      </section>
+
+      <section class="panel" id="publish-result" hidden>
+        <h3 id="publish-result-title"></h3>
+        <p id="publish-result-pr" hidden>PR: <a id="publish-result-link" target="_blank" rel="noopener"></a></p>
+        <details>
+          <summary>Log da publicação</summary>
+          <pre id="publish-result-log"></pre>
+        </details>
+        <div class="actions-buttons">
+          <button type="button" id="publish-result-close">Fechar</button>
+          <button type="button" class="primary" id="publish-result-copy" hidden>Copiar para WhatsApp</button>
+        </div>
+      </section>
+
+      <nav class="tabs" id="tabs">
+        <button type="button" class="tab active" data-view="ranking">Ranking</button>
+        <button type="button" class="tab" data-view="update">Atualizar km</button>
+        <button type="button" class="tab" data-view="runners">Participantes</button>
+      </nav>
+
+      <p class="message" id="message" hidden></p>
+
+      <div class="view" id="view-ranking">
+        <form class="ranking-filters" id="ranking-filters" aria-label="Período do ranking">
+          <label>
+            <span>Mês</span>
+            <select id="ranking-month-select"></select>
+          </label>
+          <label>
+            <span>Ano</span>
+            <select id="ranking-year-select"></select>
+          </label>
+          <div class="ranking-nav">
+            <button type="button" id="ranking-prev" aria-label="Mês anterior" title="Mês anterior">‹</button>
+            <button type="button" id="ranking-next" aria-label="Próximo mês" title="Próximo mês">›</button>
+            <button type="button" id="ranking-current">Mês vigente</button>
+          </div>
+        </form>
+
+        <div class="ranking-header">
+          <h2 class="ranking-title" id="ranking-title" aria-live="polite"></h2>
+          <button type="button" class="primary" id="copy-ranking-btn">Copiar para WhatsApp</button>
+        </div>
+
+        <div class="ranking-grid">
+          <section class="ranking-card" aria-labelledby="ranking-female-title">
+            <h3 id="ranking-female-title">Feminino</h3>
+            <table class="ranking-table" id="ranking-female"></table>
+          </section>
+          <section class="ranking-card" aria-labelledby="ranking-male-title">
+            <h3 id="ranking-male-title">Masculino</h3>
+            <table class="ranking-table" id="ranking-male"></table>
+          </section>
+          <section class="ranking-card ranking-annual" aria-labelledby="ranking-annual-title">
+            <h3 id="ranking-annual-title">Anual — <span id="ranking-year"></span></h3>
+            <table class="ranking-table" id="ranking-annual"></table>
+          </section>
+        </div>
+
+        <details class="ranking-preview">
+          <summary>Prévia do texto para WhatsApp</summary>
+          <pre id="ranking-markdown"></pre>
+        </details>
       </div>
 
-      <div class="ranking-grid">
-        <section class="ranking-card" aria-labelledby="ranking-female-title">
-          <h3 id="ranking-female-title">Feminino</h3>
-          <table class="ranking-table" id="ranking-female"></table>
-        </section>
-        <section class="ranking-card" aria-labelledby="ranking-male-title">
-          <h3 id="ranking-male-title">Masculino</h3>
-          <table class="ranking-table" id="ranking-male"></table>
-        </section>
-        <section class="ranking-card ranking-annual" aria-labelledby="ranking-annual-title">
-          <h3 id="ranking-annual-title">Anual — <span id="ranking-year"></span></h3>
-          <table class="ranking-table" id="ranking-annual"></table>
-        </section>
+      <div class="view" id="view-update" hidden>
+        <main class="layout">
+          <aside class="runners">
+            <section>
+              <h2>Feminino</h2>
+              <ul class="runner-list" id="list-female"></ul>
+            </section>
+            <section>
+              <h2>Masculino</h2>
+              <ul class="runner-list" id="list-male"></ul>
+            </section>
+          </aside>
+
+          <section class="workspace">
+            <p class="empty" id="empty">Marque os participantes que serão atualizados.</p>
+            <div id="cards"></div>
+          </section>
+        </main>
+
+        <footer class="actions" id="actions" hidden>
+          <div class="actions-buttons" id="actions-buttons">
+            <button type="button" id="analyze-btn">Analisar imagens</button>
+            <button type="button" class="primary" id="review-btn">Revisar e salvar</button>
+          </div>
+          <div class="confirm" id="confirm" hidden>
+            <h3>Confirmar atualização de <span id="confirm-month"></span></h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Participante</th>
+                  <th>Novos km</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="confirm-body"></tbody>
+            </table>
+            <div class="actions-buttons">
+              <button type="button" id="cancel-btn">Voltar</button>
+              <button type="button" class="primary" id="save-btn">Confirmar e salvar</button>
+            </div>
+          </div>
+        </footer>
       </div>
 
-      <details class="ranking-preview">
-        <summary>Prévia do texto para WhatsApp</summary>
-        <pre id="ranking-markdown"></pre>
-      </details>
-    </div>
-
-    <div class="view" id="view-update" hidden>
-      <main class="layout">
-        <aside class="runners">
+      <div class="view" id="view-runners" hidden>
+        <form class="runner-form" id="runner-form">
+          <input type="text" id="runner-name" placeholder="Nome do participante" required />
+          <select id="runner-gender">
+            <option value="female">Feminino</option>
+            <option value="male">Masculino</option>
+          </select>
+          <button type="submit" class="primary" id="runner-add-btn">Adicionar</button>
+        </form>
+        <div class="manage-lists">
           <section>
             <h2>Feminino</h2>
-            <ul class="runner-list" id="list-female"></ul>
+            <ul class="manage-list" id="manage-female"></ul>
           </section>
           <section>
             <h2>Masculino</h2>
-            <ul class="runner-list" id="list-male"></ul>
+            <ul class="manage-list" id="manage-male"></ul>
           </section>
-        </aside>
-
-        <section class="workspace">
-          <p class="empty" id="empty">Marque os participantes que serão atualizados.</p>
-          <div id="cards"></div>
-        </section>
-      </main>
-
-      <footer class="actions" id="actions" hidden>
-        <div class="actions-buttons" id="actions-buttons">
-          <button type="button" id="analyze-btn">Analisar imagens</button>
-          <button type="button" class="primary" id="review-btn">Revisar e salvar</button>
         </div>
-        <div class="confirm" id="confirm" hidden>
-          <h3>Confirmar atualização de <span id="confirm-month"></span></h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Participante</th>
-                <th>Novos km</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody id="confirm-body"></tbody>
-          </table>
-          <div class="actions-buttons">
-            <button type="button" id="cancel-btn">Voltar</button>
-            <button type="button" class="primary" id="save-btn">Confirmar e salvar</button>
-          </div>
-        </div>
-      </footer>
-    </div>
-
-    <div class="view" id="view-runners" hidden>
-      <form class="runner-form" id="runner-form">
-        <input type="text" id="runner-name" placeholder="Nome do participante" required />
-        <select id="runner-gender">
-          <option value="female">Feminino</option>
-          <option value="male">Masculino</option>
-        </select>
-        <button type="submit" class="primary" id="runner-add-btn">Adicionar</button>
-      </form>
-      <div class="manage-lists">
-        <section>
-          <h2>Feminino</h2>
-          <ul class="manage-list" id="manage-female"></ul>
-        </section>
-        <section>
-          <h2>Masculino</h2>
-          <ul class="manage-list" id="manage-male"></ul>
-        </section>
       </div>
     </div>
 
