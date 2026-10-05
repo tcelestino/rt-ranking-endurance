@@ -1,10 +1,13 @@
 import 'dotenv/config';
+import { execFile } from 'child_process';
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
+import { promisify } from 'util';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
 import { generateManifest, isManifestCurrent } from '../../processor/manifest';
+import { writeRankingMarkdown } from '../../processor/markdownGenerator';
 import {
   buildRankingMarkdown,
   calcAnnualRanking,
@@ -42,6 +45,10 @@ class HttpError extends Error {
 
 const PORT = Number(process.env.BACKOFFICE_PORT) || 3002;
 const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const DEPLOY_TIMEOUT_MS = 5 * 60 * 1000;
+
+const execFileAsync = promisify(execFile);
+let publishing = false;
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
@@ -247,6 +254,57 @@ app.post('/api/new-month', async (_req, res, next) => {
     next(err);
   }
 });
+
+async function listPendingDataChanges(): Promise<string[]> {
+  const { stdout } = await execFileAsync('git', ['status', '--porcelain', '--', 'data/']);
+  return stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+}
+
+app.get('/api/publish/status', async (_req, res, next) => {
+  try {
+    res.json({ publishing, pendingChanges: await listPendingDataChanges() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/publish', async (req, res, next) => {
+  try {
+    const { autoMerge } = req.body ?? {};
+    if (typeof autoMerge !== 'boolean') throw new HttpError(400, 'Informe se o merge deve ser automático');
+    if (publishing) throw new HttpError(409, 'Já existe uma publicação em andamento');
+
+    const pendingChanges = await listPendingDataChanges();
+    if (pendingChanges.length === 0) throw new HttpError(409, 'Nenhuma alteração em data/ para publicar');
+
+    publishing = true;
+    try {
+      const markdown = writeRankingMarkdown();
+      const args = ['scripts/deploy.sh', ...(autoMerge ? [] : ['--no-merge'])];
+      try {
+        const { stdout, stderr } = await execFileAsync('bash', args, { timeout: DEPLOY_TIMEOUT_MS });
+        const log = `${stdout}${stderr}`;
+        res.json({ log, prUrl: extractPrUrl(log), markdown });
+      } catch (err) {
+        const { stdout = '', stderr = '', message } = err as { stdout?: string; stderr?: string; message: string };
+        const log = `${stdout}${stderr}` || message;
+        console.error(`[POST /api/publish] deploy.sh falhou: ${message}`);
+        res.status(500).json({ error: 'Falha ao publicar. Confira o log.', log, prUrl: extractPrUrl(log) });
+      }
+    } finally {
+      publishing = false;
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+function extractPrUrl(log: string): string | null {
+  return log.match(/https:\/\/github\.com\/[^\s]+\/pull\/\d+/)?.[0] ?? null;
+}
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const status = err instanceof HttpError ? err.status : 500;

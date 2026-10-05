@@ -104,8 +104,14 @@ button:disabled {
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 button.attention {
@@ -121,6 +127,43 @@ button.attention {
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
+}
+
+.publish-files {
+  list-style: none;
+  margin-bottom: 12px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+}
+
+.publish-merge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.panel details {
+  margin-bottom: 12px;
+}
+
+.panel summary {
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.panel pre {
+  margin-top: 8px;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+}
+
+.panel a {
+  color: var(--color-accent);
 }
 
 .panel h3 {

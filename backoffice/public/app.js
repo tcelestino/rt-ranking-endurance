@@ -10,6 +10,10 @@ const state = {
   pendingRemoval: null,
   // período exibido na aba Ranking
   ranking: { year: null, month: null, periods: [], current: null, markdown: '' },
+  // arquivos de data/ com alterações ainda não publicadas
+  pendingChanges: [],
+  // texto do ranking gerado na última publicação
+  publishedMarkdown: '',
 };
 
 let nextImageId = 1;
@@ -402,6 +406,7 @@ function renderNewMonthButton() {
 
 function openNewMonth() {
   clearMessage();
+  closePublish();
   if (state.manifestCurrent) {
     closeNewMonth();
     showMessage(`O manifest de ${state.monthName}/${state.year} já foi gerado. Nada a fazer.`, 'info');
@@ -513,14 +518,14 @@ async function loadRanking(year, month) {
   }
 }
 
-async function copyRanking() {
+async function copyToClipboard(text, btn) {
   clearMessage();
-  const btn = $('copy-ranking-btn');
+  const label = btn.textContent;
   try {
-    await navigator.clipboard.writeText(state.ranking.markdown);
+    await navigator.clipboard.writeText(text);
     btn.textContent = 'Copiado!';
     setTimeout(() => {
-      btn.textContent = 'Copiar para WhatsApp';
+      btn.textContent = label;
     }, 2000);
   } catch (err) {
     showMessage(`Não foi possível copiar: ${err.message}`);
@@ -539,6 +544,87 @@ function stepRanking(offset) {
   const index = timeline.findIndex((t) => t.year === state.ranking.year && t.month === state.ranking.month);
   const target = timeline[index + offset];
   if (target) loadRanking(target.year, target.month);
+}
+
+// ---------- Publicação ----------
+
+async function refreshPublishStatus() {
+  try {
+    const { pendingChanges } = await request('/api/publish/status');
+    state.pendingChanges = pendingChanges;
+    $('publish-btn').classList.toggle('attention', pendingChanges.length > 0);
+    $('publish-btn').title =
+      pendingChanges.length > 0 ? `${pendingChanges.length} arquivo(s) para publicar` : 'Nenhuma alteração para publicar';
+  } catch (err) {
+    showMessage(`Falha ao verificar alterações: ${err.message}`);
+  }
+}
+
+async function openPublish() {
+  clearMessage();
+  closeNewMonth();
+  $('publish-result').hidden = true;
+  await refreshPublishStatus();
+  if (state.pendingChanges.length === 0) {
+    closePublish();
+    showMessage('Nenhuma alteração em data/ para publicar.', 'info');
+    return;
+  }
+  $('publish-files').replaceChildren(
+    ...state.pendingChanges.map((file) => {
+      const li = document.createElement('li');
+      li.textContent = file;
+      return li;
+    }),
+  );
+  $('publish-panel').hidden = false;
+}
+
+function closePublish() {
+  $('publish-panel').hidden = true;
+}
+
+function showPublishResult(title, body) {
+  $('publish-result-title').textContent = title;
+  $('publish-result-log').textContent = body.log ?? '';
+  $('publish-result-pr').hidden = !body.prUrl;
+  $('publish-result-link').href = body.prUrl ?? '';
+  $('publish-result-link').textContent = body.prUrl ?? '';
+  state.publishedMarkdown = body.markdown ?? '';
+  $('publish-result-copy').hidden = !body.markdown;
+  $('publish-result').hidden = false;
+}
+
+async function publish() {
+  clearMessage();
+  const confirmBtn = $('publish-confirm');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Publicando…';
+  $('publish-btn').disabled = true;
+  try {
+    const res = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoMerge: $('publish-auto-merge').checked }),
+    });
+    const body = await res.json().catch(() => ({}));
+    closePublish();
+    if (res.ok) {
+      showPublishResult('Publicação concluída', body);
+    } else if (body.log) {
+      showPublishResult('Falha na publicação', body);
+      showMessage(body.error);
+    } else {
+      showMessage(body.error || `Erro HTTP ${res.status}`);
+    }
+  } catch (err) {
+    showMessage(err.message);
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Confirmar publicação';
+    $('publish-btn').disabled = false;
+    refreshPublishStatus();
+  }
 }
 
 // ---------- Navegação ----------
@@ -563,6 +649,7 @@ function applyState(data) {
   state.participants = data.participants;
   state.manifestCurrent = data.manifestCurrent;
   renderNewMonthButton();
+  refreshPublishStatus();
   $('month-label').textContent = `Mês vigente: ${data.monthName}/${data.year}`;
 }
 
@@ -575,6 +662,15 @@ async function init() {
   $('new-month-btn').addEventListener('click', openNewMonth);
   $('new-month-cancel').addEventListener('click', closeNewMonth);
   $('new-month-confirm').addEventListener('click', startNewMonth);
+  $('publish-btn').addEventListener('click', openPublish);
+  $('publish-cancel').addEventListener('click', closePublish);
+  $('publish-confirm').addEventListener('click', publish);
+  $('publish-result-close').addEventListener('click', () => {
+    $('publish-result').hidden = true;
+  });
+  $('publish-result-copy').addEventListener('click', () =>
+    copyToClipboard(state.publishedMarkdown, $('publish-result-copy')),
+  );
   $('ranking-year-select').addEventListener('change', changeRankingYear);
   $('ranking-month-select').addEventListener('change', () =>
     loadRanking(state.ranking.year, Number($('ranking-month-select').value)),
@@ -583,7 +679,7 @@ async function init() {
   $('ranking-next').addEventListener('click', () => stepRanking(1));
   $('ranking-current').addEventListener('click', () => loadRanking());
   $('ranking-filters').addEventListener('submit', (e) => e.preventDefault());
-  $('copy-ranking-btn').addEventListener('click', copyRanking);
+  $('copy-ranking-btn').addEventListener('click', () => copyToClipboard(state.ranking.markdown, $('copy-ranking-btn')));
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }
