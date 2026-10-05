@@ -35,8 +35,17 @@ function clearMessage() {
   $('message').hidden = true;
 }
 
+// fetch autenticado: envia o session token do Clerk; em 401 volta para a tela de login
+async function apiFetch(url, options = {}) {
+  const token = await window.Clerk.session?.getToken();
+  const headers = { ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) showSignIn();
+  return res;
+}
+
 async function request(url, options) {
-  const res = await fetch(url, options);
+  const res = await apiFetch(url, options);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `Erro HTTP ${res.status}`);
   return body;
@@ -428,7 +437,8 @@ async function startNewMonth() {
     applyState(newState);
     refreshRunnerViews();
     closeNewMonth();
-    const created = createdFiles.length > 0 ? `Arquivos criados: ${createdFiles.join(', ')}.` : 'Os JSONs do mês já existiam.';
+    const created =
+      createdFiles.length > 0 ? `Arquivos criados: ${createdFiles.join(', ')}.` : 'Os JSONs do mês já existiam.';
     showMessage(`Manifest gerado e cache limpo. ${created} Publique para enviar as alterações.`, 'success');
   } catch (err) {
     showMessage(err.message);
@@ -554,7 +564,9 @@ async function refreshPublishStatus() {
     state.pendingChanges = pendingChanges;
     $('publish-btn').classList.toggle('attention', pendingChanges.length > 0);
     $('publish-btn').title =
-      pendingChanges.length > 0 ? `${pendingChanges.length} arquivo(s) para publicar` : 'Nenhuma alteração para publicar';
+      pendingChanges.length > 0
+        ? `${pendingChanges.length} arquivo(s) para publicar`
+        : 'Nenhuma alteração para publicar';
   } catch (err) {
     showMessage(`Falha ao verificar alterações: ${err.message}`);
   }
@@ -602,7 +614,7 @@ async function publish() {
   confirmBtn.textContent = 'Publicando…';
   $('publish-btn').disabled = true;
   try {
-    const res = await fetch('/api/publish', {
+    const res = await apiFetch('/api/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ autoMerge: $('publish-auto-merge').checked }),
@@ -653,7 +665,7 @@ function applyState(data) {
   $('month-label').textContent = `Mês vigente: ${data.monthName}/${data.year}`;
 }
 
-async function init() {
+function bindEvents() {
   $('analyze-btn').addEventListener('click', analyzeAll);
   $('review-btn').addEventListener('click', openConfirm);
   $('cancel-btn').addEventListener('click', closeConfirm);
@@ -683,14 +695,108 @@ async function init() {
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }
+}
 
-  try {
-    applyState(await request('/api/state'));
-    refreshRunnerViews();
-  } catch (err) {
-    showMessage(`Falha ao carregar participantes: ${err.message}`);
+// ---------- Autenticação (Clerk) ----------
+
+const CLERK_JS_URL = (domain) => `https://${domain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
+const CLERK_UI_URL = (domain) => `https://${domain}/npm/@clerk/ui@1/dist/ui.browser.js`;
+
+let appStarted = false;
+let signInMounted = false;
+
+function loadScript(src, attributes = {}) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.crossOrigin = 'anonymous';
+    for (const [key, value] of Object.entries(attributes)) script.setAttribute(key, value);
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function loadClerk() {
+  const res = await fetch('/api/config');
+  if (!res.ok) throw new Error(`Falha ao carregar configuração (HTTP ${res.status})`);
+  const { publishableKey } = await res.json();
+
+  // o domínio do Frontend API do Clerk vem codificado na publishable key (pk_test_<base64>)
+  const domain = atob(publishableKey.split('_')[2]).slice(0, -1);
+  await loadScript(CLERK_UI_URL(domain));
+  await loadScript(CLERK_JS_URL(domain), { 'data-clerk-publishable-key': publishableKey });
+  await window.Clerk.load({ ui: { ClerkUI: window.__internal_ClerkUICtor } });
+}
+
+function showAuthStatus(text) {
+  $('auth-status').textContent = text;
+  $('auth-status').hidden = !text;
+}
+
+function showSignIn() {
+  appStarted = false;
+  $('app').hidden = true;
+  $('auth').hidden = false;
+  showAuthStatus('');
+  if (signInMounted) return;
+  window.Clerk.unmountUserButton($('sign-in'));
+  window.Clerk.mountSignIn($('sign-in'));
+  signInMounted = true;
+}
+
+function unmountSignIn() {
+  if (!signInMounted) return;
+  window.Clerk.unmountSignIn($('sign-in'));
+  signInMounted = false;
+}
+
+function showForbidden(message) {
+  $('app').hidden = true;
+  $('auth').hidden = false;
+  showAuthStatus(message);
+  unmountSignIn();
+  window.Clerk.mountUserButton($('sign-in'));
+}
+
+async function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+  showAuthStatus('Carregando…');
+  unmountSignIn();
+
+  const res = await apiFetch('/api/state');
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 401) return;
+  if (!res.ok) {
+    appStarted = false;
+    showForbidden(body.error || `Erro HTTP ${res.status}`);
+    return;
   }
+
+  $('auth').hidden = true;
+  $('app').hidden = false;
+  window.Clerk.mountUserButton($('user-button'));
+  $('user-button').title = body.user?.email ?? '';
+  applyState(body);
+  refreshRunnerViews();
   await loadRanking();
+}
+
+async function init() {
+  bindEvents();
+  try {
+    await loadClerk();
+  } catch (err) {
+    showAuthStatus(`Falha ao carregar o login: ${err.message}`);
+    return;
+  }
+
+  // emite o estado atual ao registrar; user undefined = sessão ainda carregando
+  window.Clerk.addListener(({ user }) => {
+    if (user) startApp();
+    else if (user === null) showSignIn();
+  });
 }
 
 init();

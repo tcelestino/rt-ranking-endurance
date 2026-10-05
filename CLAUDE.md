@@ -98,7 +98,12 @@ O projeto tem quatro partes independentes:
 - `GET /api/publish/status` → `{ publishing, pendingChanges }` (arquivos alterados em `data/` segundo `git status`)
 - `POST /api/publish` `{ autoMerge }` → `writeRankingMarkdown` + `bash scripts/deploy.sh` (com `--no-merge` se `autoMerge` for falso, timeout de 5 min); retorna `{ log, prUrl, markdown }`. 409 sem alterações ou com publicação em andamento; 500 com `log` se o script falhar. Como o `deploy.sh` troca de branch, rode o backoffice a partir da `main`
 
-`GET /api/state` também retorna `manifestCurrent`, usado para destacar o botão "Novo mês" ou avisar que o manifest já foi gerado.
+`GET /api/state` também retorna `manifestCurrent`, usado para destacar o botão "Novo mês" ou avisar que o manifest já foi gerado, e `user` (`{ name, email }` do Clerk), mostrado como tooltip do UserButton no header.
+
+**Autenticação (Clerk)** — `backoffice/src/auth.ts`. O servidor não sobe sem `CLERK_PUBLISHABLE_KEY` e `CLERK_SECRET_KEY` no `.env`.
+- `GET /api/config` é público e retorna `{ publishableKey }`; o `app.js` carrega o Clerk JS pelo Frontend API (domínio extraído da chave), exibe o `SignIn` e envia `Authorization: Bearer <session token>` em todas as chamadas (`apiFetch`).
+- Demais rotas `/api/*` passam por `clerkMiddleware()` + `requireAdmin`: 401 sem sessão válida, 403 se `publicMetadata.role` não for `"admin"`.
+- Configuração no dashboard do Clerk: login só com Google; Restrictions > Allowlist com os emails permitidos; Sessions > Customize session token com `{ "metadata": "{{user.public_metadata}}" }`; após o primeiro login, definir `publicMetadata` = `{ "role": "admin" }` no usuário.
 
 Scripts do `processor/` reaproveitados pelo backoffice exportam a função principal e só executam `main()` com `if (require.main === module)`.
 
@@ -145,7 +150,7 @@ Página estática deployada no Render. Carrega dados via `fetch()` para a API (`
 
 ## Arquivos sensíveis
 
-- `.env` — variáveis de ambiente com API keys (`GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`) (nunca commitar)
+- `.env` — variáveis de ambiente com API keys (`GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`, `CLERK_SECRET_KEY`) (nunca commitar)
 
 Devem estar no `.gitignore`.
 
