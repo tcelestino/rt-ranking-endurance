@@ -26,6 +26,31 @@ function formatKm(value) {
   return `${value.toFixed(2).replace('.', ',')} km`;
 }
 
+const MIN_PACE = 120;
+const MAX_PACE = 1200;
+
+// pace em segundos/km -> 5'45"/km
+function formatPace(seconds) {
+  const rounded = Math.round(seconds);
+  return `${Math.floor(rounded / 60)}'${String(rounded % 60).padStart(2, '0')}"/km`;
+}
+
+// pace em segundos/km -> 5:45 (valor do campo editável)
+function paceToInput(seconds) {
+  return seconds === null || seconds === undefined
+    ? ''
+    : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+// mesma regra de processor/pace.ts (parsePace); undefined = valor inválido
+function parsePaceInput(text) {
+  if (!text.trim()) return null;
+  const match = text.trim().match(/^(\d{1,2})\s*[:'’]\s*(\d{2})/);
+  if (!match || Number(match[2]) >= 60) return undefined;
+  const pace = Number(match[1]) * 60 + Number(match[2]);
+  return pace >= MIN_PACE && pace <= MAX_PACE ? pace : undefined;
+}
+
 function showMessage(text, type = 'error') {
   const el = $('message');
   el.textContent = text;
@@ -160,6 +185,13 @@ function renderImage(name, item) {
     item.km = kmInput.value === '' ? null : Number(kmInput.value);
   });
 
+  const paceInput = li.querySelector('.image-pace input');
+  paceInput.value = item.paceText;
+  paceInput.disabled = item.status !== 'done';
+  paceInput.addEventListener('input', () => {
+    item.paceText = paceInput.value;
+  });
+
   li.querySelector('.image-status').textContent = statusText(item);
   li.querySelector('.image-remove').addEventListener('click', () => {
     URL.revokeObjectURL(item.previewUrl);
@@ -200,6 +232,7 @@ async function addFiles(name, fileList) {
       previewUrl: URL.createObjectURL(file),
       status: 'pending',
       km: null,
+      paceText: '',
       hash: null,
       error: null,
     });
@@ -231,6 +264,7 @@ async function analyzeAll() {
       const result = await postJson('/api/analyze', { name, mimeType: item.mimeType, data: item.data });
       item.hash = result.hash;
       item.km = result.km;
+      item.paceText = paceToInput(result.pace);
       const sameInSession = allItems().find(({ item: other }) => other !== item && other.hash === result.hash);
       if (result.cached) {
         item.status = 'duplicate';
@@ -262,7 +296,13 @@ function collectEntries() {
   if (invalid) throw new Error(`Km inválido em ${invalid.item.filename} (${invalid.name}).`);
   if (ready.length === 0) throw new Error('Nenhuma imagem válida para salvar.');
 
-  return ready.map(({ name, item }) => ({ name, km: item.km, hash: item.hash, filename: item.filename }));
+  return ready.map(({ name, item }) => {
+    const pace = parsePaceInput(item.paceText);
+    if (pace === undefined) {
+      throw new Error(`Pace inválido em ${item.filename} (${name}). Use m:ss, entre 2:00 e 20:00.`);
+    }
+    return { name, km: item.km, pace, hash: item.hash, filename: item.filename };
+  });
 }
 
 function openConfirm() {
@@ -280,12 +320,13 @@ function openConfirm() {
   body.replaceChildren();
   const names = [...new Set(entries.map((e) => e.name))];
   for (const name of names) {
-    const kms = entries.filter((e) => e.name === name).map((e) => e.km);
+    const runs = entries.filter((e) => e.name === name);
     const before = findParticipant(name).total;
-    const after = before + kms.reduce((sum, v) => sum + v, 0);
+    const after = before + runs.reduce((sum, e) => sum + e.km, 0);
+    const runText = (e) => (e.pace === null ? formatKm(e.km) : `${formatKm(e.km)} (${formatPace(e.pace)})`);
 
     const tr = document.createElement('tr');
-    const cells = [name, kms.map(formatKm).join(' + '), `${formatKm(before)} → ${formatKm(after)}`];
+    const cells = [name, runs.map(runText).join(' + '), `${formatKm(before)} → ${formatKm(after)}`];
     for (const text of cells) {
       const td = document.createElement('td');
       td.textContent = text;
@@ -460,6 +501,7 @@ function rankingRow(cells, className) {
     const td = document.createElement('td');
     td.textContent = cell.text;
     if (cell.colSpan) td.colSpan = cell.colSpan;
+    if (cell.className) td.className = cell.className;
     tr.append(td);
   }
   return tr;
@@ -470,18 +512,19 @@ function renderRankingTable(table, runners, total) {
   const active = runners.filter((r) => r.km > 0);
   for (const r of active) {
     const name = `${MEDALS[r.position] ?? ''} ${r.name}`.trim();
-    table.append(rankingRow([{ text: `${r.position}º` }, { text: name }, { text: formatKm(r.km) }]));
+    const pace = { text: r.pace === null ? '—' : formatPace(r.pace), className: 'pace-cell' };
+    table.append(rankingRow([{ text: `${r.position}º` }, { text: name }, pace, { text: formatKm(r.km) }]));
   }
   if (active.length === 0) {
-    table.append(rankingRow([{ text: 'Nenhum km registrado', colSpan: 3 }], 'empty-row'));
+    table.append(rankingRow([{ text: 'Nenhum km registrado', colSpan: 4 }], 'empty-row'));
   }
 
   const tfoot = document.createElement('tfoot');
-  tfoot.append(rankingRow([{ text: 'Total', colSpan: 2 }, { text: formatKm(total) }]));
+  tfoot.append(rankingRow([{ text: 'Total', colSpan: 3 }, { text: formatKm(total) }]));
   const inactive = runners.length - active.length;
   if (inactive > 0) {
     const label = inactive === 1 ? '1 participante sem km' : `${inactive} participantes sem km`;
-    tfoot.append(rankingRow([{ text: label, colSpan: 3 }], 'inactive-row'));
+    tfoot.append(rankingRow([{ text: label, colSpan: 4 }], 'inactive-row'));
   }
   table.append(tfoot);
 }
