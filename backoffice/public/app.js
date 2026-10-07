@@ -641,9 +641,10 @@ function barChart(
   id,
   labels,
   datasets,
-  { horizontal = false, stacked = false, format = formatKm, integer = false } = {},
+  { horizontal = false, stacked = false, format = formatKm, integer = false, tickFormat = null } = {},
 ) {
-  const valueAxis = { beginAtZero: true, stacked, ticks: integer ? { precision: 0 } : {} };
+  const ticks = { ...(integer ? { precision: 0 } : {}), ...(tickFormat ? { callback: tickFormat } : {}) };
+  const valueAxis = { beginAtZero: true, stacked, ticks };
   const categoryAxis = { stacked, grid: { display: false } };
   charts.push(
     new window.Chart($(id), {
@@ -727,6 +728,15 @@ function renderStatsCharts(data) {
   runnerBarChart('chart-activities', data.runners, 'activities', formatCount('atividade', 'atividades'));
   runnerBarChart('chart-active-months', data.runners, 'activeMonths', formatCount('mês', 'meses'));
 
+  // menor pace primeiro: o mais rápido no topo
+  const paced = data.runners.filter((r) => r.pace !== null).sort((a, b) => a.pace - b.pace);
+  barChart(
+    'chart-pace',
+    paced.map((r) => r.name),
+    genderDatasets(paced, 'pace', theme),
+    { horizontal: true, stacked: true, format: formatPace, tickFormat: (value) => paceToInput(Math.round(value)) },
+  );
+
   barChart(
     'chart-active-runners',
     monthLabels,
@@ -790,6 +800,13 @@ function renderStatsKpis(data) {
 
   const longest = data.longestRun;
   setKpi('kpi-longest', longest ? formatKm(longest.km) : '—', longest ? `${longest.name} · ${longest.monthName}` : '');
+
+  const bestPace = data.bestPace;
+  setKpi(
+    'kpi-best-pace',
+    bestPace ? formatPace(bestPace.pace) : '—',
+    bestPace ? `${bestPace.name} · ${formatKm(bestPace.km)} · ${bestPace.monthName}` : '',
+  );
 
   const consolidated = data.months.filter((m) => m.activities === null).map((m) => m.monthName);
   $('stats-note').hidden = consolidated.length === 0;
