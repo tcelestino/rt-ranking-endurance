@@ -25,6 +25,7 @@ import {
   removeParticipant,
   saveParticipants,
 } from '../../processor/participantsParser';
+import { buildStats } from '../../processor/stats';
 import { capitalizeFirstLetter, getCurrentMonth } from '../../processor/utils';
 
 type Gender = 'female' | 'male';
@@ -154,6 +155,21 @@ app.get('/api/ranking', (req, res, next) => {
       totals: { female: calcTotalKm(female), male: calcTotalKm(male), annual: calcTotalKm(annual) },
       markdown: buildRankingMarkdown(month, year),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/stats', (req, res, next) => {
+  try {
+    const periods = listRankingPeriods();
+    const latest = periods[periods.length - 1];
+    if (!latest) throw new HttpError(404, 'Não há dados em data/');
+
+    const year = parsePeriodParam(req.query.year, 'Ano', latest.year);
+    if (!periods.some((p) => p.year === year)) throw new HttpError(404, `Não há dados para ${year}`);
+
+    res.json(buildStats(year));
   } catch (err) {
     next(err);
   }
