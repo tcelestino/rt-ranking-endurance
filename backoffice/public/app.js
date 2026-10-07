@@ -14,6 +14,8 @@ const state = {
   pendingChanges: [],
   // texto do ranking gerado na última publicação
   publishedMarkdown: '',
+  // ano e dados exibidos na aba Gráficos
+  stats: { year: null, data: null },
 };
 
 let nextImageId = 1;
@@ -556,6 +558,244 @@ function stepRanking(offset) {
   if (target) loadRanking(target.year, target.month);
 }
 
+// ---------- Gráficos ----------
+
+const CHART_JS_URL = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';
+const GENDER_LABEL = { female: 'Feminino', male: 'Masculino' };
+
+let chartJsPromise = null;
+let charts = [];
+
+function ensureChartJs() {
+  chartJsPromise ??= loadScript(CHART_JS_URL).catch((err) => {
+    chartJsPromise = null;
+    throw err;
+  });
+  return chartJsPromise;
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function chartTheme() {
+  return {
+    text: cssVar('--color-muted'),
+    grid: cssVar('--color-border'),
+    accent: cssVar('--color-accent'),
+    gender: { female: cssVar('--chart-female'), male: cssVar('--chart-male') },
+    series: [1, 2, 3, 4, 5].map((i) => cssVar(`--chart-${i}`)),
+  };
+}
+
+function plural(count, singular, pluralForm) {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+const formatCount = (singular, pluralForm) => (value) => plural(value, singular, pluralForm);
+
+function barChart(
+  id,
+  labels,
+  datasets,
+  { horizontal = false, stacked = false, format = formatKm, integer = false } = {},
+) {
+  const valueAxis = { beginAtZero: true, stacked, ticks: integer ? { precision: 0 } : {} };
+  const categoryAxis = { stacked, grid: { display: false } };
+  charts.push(
+    new window.Chart($(id), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: datasets.map((d) => ({ borderRadius: 4, maxBarThickness: 32, skipNull: true, ...d })),
+      },
+      options: {
+        indexAxis: horizontal ? 'y' : 'x',
+        maintainAspectRatio: false,
+        scales: horizontal ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
+        plugins: {
+          legend: { display: datasets.length > 1 },
+          tooltip: {
+            filter: (item) => item.raw !== null,
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${format(horizontal ? ctx.parsed.x : ctx.parsed.y)}`,
+            },
+          },
+        },
+      },
+    }),
+  );
+}
+
+function genderDatasets(runners, field, theme) {
+  return ['female', 'male'].map((gender) => ({
+    label: GENDER_LABEL[gender],
+    backgroundColor: theme.gender[gender],
+    data: runners.map((r) => (r.gender === gender ? r[field] : null)),
+  }));
+}
+
+function runnerBarChart(id, runners, field, format) {
+  const ranked = runners.filter((r) => r[field] > 0).sort((a, b) => b[field] - a[field]);
+  barChart(
+    id,
+    ranked.map((r) => r.name),
+    genderDatasets(ranked, field, chartTheme()),
+    { horizontal: true, stacked: true, integer: true, format },
+  );
+}
+
+function renderStatsCharts(data) {
+  for (const chart of charts) chart.destroy();
+  charts = [];
+
+  const theme = chartTheme();
+  window.Chart.defaults.color = theme.text;
+  window.Chart.defaults.borderColor = theme.grid;
+  window.Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
+  const monthLabels = data.months.map((m) => m.monthName);
+  barChart(
+    'chart-months',
+    monthLabels,
+    ['female', 'male'].map((gender) => ({
+      label: GENDER_LABEL[gender],
+      backgroundColor: theme.gender[gender],
+      data: data.months.map((m) => m[gender]),
+    })),
+    { stacked: true },
+  );
+
+  const bestMonths = [...data.months].sort((a, b) => b.total - a.total);
+  barChart(
+    'chart-best-months',
+    bestMonths.map((m) => m.monthName),
+    [{ label: 'Total', backgroundColor: theme.accent, data: bestMonths.map((m) => m.total) }],
+    { horizontal: true },
+  );
+
+  barChart(
+    'chart-years',
+    data.yearTotals.map((y) => String(y.year)),
+    [{ label: 'Total', backgroundColor: theme.accent, data: data.yearTotals.map((y) => y.km) }],
+  );
+
+  runnerBarChart('chart-wins', data.runners, 'wins', formatCount('vitória', 'vitórias'));
+  runnerBarChart('chart-activities', data.runners, 'activities', formatCount('atividade', 'atividades'));
+  runnerBarChart('chart-active-months', data.runners, 'activeMonths', formatCount('mês', 'meses'));
+
+  barChart(
+    'chart-active-runners',
+    monthLabels,
+    [{ label: 'Corredores ativos', backgroundColor: theme.accent, data: data.months.map((m) => m.activeRunners) }],
+    { integer: true, format: formatCount('corredor', 'corredores') },
+  );
+
+  barChart(
+    'chart-distances',
+    data.distances.map((d) => d.label),
+    [{ label: 'Corridas', backgroundColor: theme.accent, data: data.distances.map((d) => d.count) }],
+    { integer: true, format: formatCount('corrida', 'corridas') },
+  );
+
+  charts.push(
+    new window.Chart($('chart-cumulative'), {
+      type: 'line',
+      data: {
+        labels: monthLabels,
+        datasets: data.cumulativeTop5.map((runner, i) => ({
+          label: runner.name,
+          data: runner.values,
+          borderColor: theme.series[i],
+          backgroundColor: theme.series[i],
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+        plugins: {
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatKm(ctx.parsed.y)}` } },
+        },
+      },
+    }),
+  );
+}
+
+function setKpi(id, value, detail) {
+  const el = $(id);
+  el.textContent = value;
+  if (detail) {
+    const small = document.createElement('small');
+    small.textContent = detail;
+    el.append(small);
+  }
+}
+
+function renderStatsKpis(data) {
+  const total = data.yearTotals.find((y) => y.year === data.year)?.km ?? 0;
+  setKpi('kpi-total', formatKm(total));
+
+  const detailed = data.months.filter((m) => m.activities !== null);
+  setKpi('kpi-activities', String(detailed.reduce((sum, m) => sum + m.activities, 0)));
+
+  const best = data.months.reduce((a, b) => (b.total > a.total ? b : a), data.months[0]);
+  setKpi('kpi-best-month', best ? best.monthName : '—', best ? formatKm(best.total) : '');
+
+  const longest = data.longestRun;
+  setKpi('kpi-longest', longest ? formatKm(longest.km) : '—', longest ? `${longest.name} · ${longest.monthName}` : '');
+
+  const consolidated = data.months.filter((m) => m.activities === null).map((m) => m.monthName);
+  $('stats-note').hidden = consolidated.length === 0;
+  $('stats-note').textContent =
+    `${consolidated.join(', ')}: os dados guardam só o total mensal de cada corredor, ` +
+    'por isso ficam fora de atividades, distribuição de distâncias e maior corrida.';
+}
+
+function renderWinnersTable(winners) {
+  const table = $('winners-table');
+  table.replaceChildren();
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const text of ['Mês', 'Feminino', 'Masculino']) {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headRow.append(th);
+  }
+  thead.append(headRow);
+  table.append(thead);
+
+  const winnerText = (winner) => (winner ? `${winner.name} (${formatKm(winner.km)})` : '—');
+  for (const w of winners) {
+    table.append(rankingRow([{ text: w.monthName }, { text: winnerText(w.female) }, { text: winnerText(w.male) }]));
+  }
+  if (winners.length === 0) {
+    table.append(rankingRow([{ text: 'Nenhum mês encerrado', colSpan: 3 }], 'empty-row'));
+  }
+}
+
+function renderStats(data) {
+  $('stats-year-select').replaceChildren(...data.years.map((y) => new Option(y, y, false, y === data.year)));
+  renderStatsKpis(data);
+  renderWinnersTable(data.winners);
+  renderStatsCharts(data);
+}
+
+async function loadStats(year) {
+  try {
+    await ensureChartJs();
+    const data = await request(`/api/stats${year ? `?year=${year}` : ''}`);
+    state.stats = { year: data.year, data };
+    renderStats(data);
+  } catch (err) {
+    showMessage(`Falha ao carregar gráficos: ${err.message}`);
+  }
+}
+
 // ---------- Publicação ----------
 
 async function refreshPublishStatus() {
@@ -650,6 +890,7 @@ function showView(view) {
     el.hidden = el.id !== `view-${view}`;
   }
   if (view === 'ranking') loadRanking(state.ranking.year, state.ranking.month);
+  if (view === 'stats') loadStats(state.stats.year);
 }
 
 // ---------- Inicialização ----------
@@ -692,6 +933,12 @@ function bindEvents() {
   $('ranking-current').addEventListener('click', () => loadRanking());
   $('ranking-filters').addEventListener('submit', (e) => e.preventDefault());
   $('copy-ranking-btn').addEventListener('click', () => copyToClipboard(state.ranking.markdown, $('copy-ranking-btn')));
+  $('stats-year-select').addEventListener('change', () => loadStats(Number($('stats-year-select').value)));
+  $('stats-filters').addEventListener('submit', (e) => e.preventDefault());
+  // as cores dos gráficos vêm das variáveis CSS, que mudam com o tema do sistema
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (state.stats.data && window.Chart) renderStatsCharts(state.stats.data);
+  });
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => showView(tab.dataset.view));
   }

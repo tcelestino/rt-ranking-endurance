@@ -72,6 +72,7 @@
         <button type="button" class="tab active" data-view="ranking">Ranking</button>
         <button type="button" class="tab" data-view="update">Atualizar km</button>
         <button type="button" class="tab" data-view="runners">Participantes</button>
+        <button type="button" class="tab" data-view="stats">Gráficos</button>
       </nav>
 
       <p class="message" id="message" hidden></p>
@@ -182,6 +183,78 @@
             <ul class="manage-list" id="manage-male"></ul>
           </section>
         </div>
+      </div>
+      <div class="view" id="view-stats" hidden>
+        <form class="ranking-filters" id="stats-filters" aria-label="Ano dos gráficos">
+          <label>
+            <span>Ano</span>
+            <select id="stats-year-select"></select>
+          </label>
+        </form>
+
+        <dl class="stats-kpis">
+          <div class="stats-kpi">
+            <dt>Total do ano</dt>
+            <dd id="kpi-total"></dd>
+          </div>
+          <div class="stats-kpi">
+            <dt>Atividades</dt>
+            <dd id="kpi-activities"></dd>
+          </div>
+          <div class="stats-kpi">
+            <dt>Melhor mês</dt>
+            <dd id="kpi-best-month"></dd>
+          </div>
+          <div class="stats-kpi">
+            <dt>Maior corrida</dt>
+            <dd id="kpi-longest"></dd>
+          </div>
+        </dl>
+
+        <div class="stats-grid">
+          <section class="ranking-card stats-wide" aria-labelledby="chart-months-title">
+            <h3 id="chart-months-title">Km por mês</h3>
+            <div class="chart-box"><canvas id="chart-months"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-best-months-title">
+            <h3 id="chart-best-months-title">Meses com mais km</h3>
+            <div class="chart-box"><canvas id="chart-best-months"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-years-title">
+            <h3 id="chart-years-title">Km por ano</h3>
+            <div class="chart-box"><canvas id="chart-years"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-wins-title">
+            <h3 id="chart-wins-title">Vitórias no mês</h3>
+            <div class="chart-box"><canvas id="chart-wins"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="winners-title">
+            <h3 id="winners-title">Campeões do mês</h3>
+            <table class="ranking-table stats-winners" id="winners-table"></table>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-activities-title">
+            <h3 id="chart-activities-title">Atividades por corredor</h3>
+            <div class="chart-box chart-box-tall"><canvas id="chart-activities"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-active-months-title">
+            <h3 id="chart-active-months-title">Meses ativos por corredor</h3>
+            <div class="chart-box chart-box-tall"><canvas id="chart-active-months"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-active-runners-title">
+            <h3 id="chart-active-runners-title">Corredores ativos por mês</h3>
+            <div class="chart-box"><canvas id="chart-active-runners"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-distances-title">
+            <h3 id="chart-distances-title">Distribuição de distâncias</h3>
+            <div class="chart-box"><canvas id="chart-distances"></canvas></div>
+          </section>
+          <section class="ranking-card stats-wide" aria-labelledby="chart-cumulative-title">
+            <h3 id="chart-cumulative-title">Evolução acumulada — top 5</h3>
+            <div class="chart-box"><canvas id="chart-cumulative"></canvas></div>
+          </section>
+        </div>
+
+        <p class="stats-note" id="stats-note" hidden></p>
       </div>
     </div>
 
