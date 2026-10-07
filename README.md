@@ -8,31 +8,46 @@ O script lê screenshots de apps de corrida (Strava, Garmin, Nike Run, etc.), ex
 
 ```mermaid
 flowchart TD
-    A[images/*.png] --> B[npm run update]
-    B --> C[Scan pasta images/]
-    C --> D[Gemini API\nextrai km da imagem]
-    D --> E{Gênero via\nrunners.json}
-    E -->|feminino| F[data/female-mes.json]
-    E -->|masculino| G[data/male-mes.json]
+    subgraph Entrada
+        A[images/*.png] --> B[npm run update]
+        B --> D[Gemini API<br/>extrai km da imagem]
+        U[Prints enviados<br/>no backoffice] --> BO[npm run backoffice<br/>localhost:3002 + Clerk]
+        BO --> W[Workers AI<br/>extrai km da imagem]
+    end
 
-    F --> H[npm run generate:manifest]
+    D --> C{Cache SHA256<br/>data/.image-cache.json}
+    W --> C
+    C -->|imagem nova| E{Gênero via<br/>data/runners.json}
+    C -->|já processada| X[Ignorada]
+    E -->|feminino| F[data/ano/female-mes.json]
+    E -->|masculino| G[data/ano/male-mes.json]
+
+    F --> H[npm run generate:manifest<br/>ou botão Novo mês]
     G --> H
-    H --> I[Lê data/*.json]
-    I --> K[data/manifest.json\nlista de meses disponíveis]
+    H --> K[data/manifest.json<br/>meses disponíveis]
 
-    K --> L[api/src/server.ts\nExpress API]
-    L --> M[static/index.html\nfetch via API_BASE]
+    F --> MD[npm run generate:markdown<br/>output/ranking.md]
+    G --> MD
+    MD --> WA[npm run copy:ranking<br/>ou Copiar para WhatsApp]
+
+    K --> DP[npm run deploy<br/>ou botão Publicar]
+    F --> DP
+    G --> DP
+    DP --> PR[PR no GitHub<br/>merge na main]
+
+    PR --> L[api/src/server.ts<br/>Express API]
+    L --> M[static/index.html<br/>fetch via API_BASE]
 ```
 
 ## Estrutura
 
 ```
 rt-ranking-endurance/
-├── api/                          # Servidor Express (deployado no Render)
+├── api/                          # Servidor Express
 │   ├── src/server.ts             # 4 endpoints REST + CORS + rate limiting
 │   ├── package.json
 │   └── tsconfig.json
-├── static/                       # Frontend estático (deployado no Render)
+├── static/                       # Frontend estático
 │   ├── index.html                # Página com rankings e navegação por abas
 │   └── assets/
 │       ├── app.js                # Lógica do browser (fetch, ranking, UI)
@@ -63,7 +78,6 @@ rt-ranking-endurance/
 │   ├── copy-ranking.sh           # Copia output/ranking.md para o clipboard
 │   └── deploy.sh                 # Cria branch, commit, PR e merge dos dados
 ├── images/                       # Coloque aqui os screenshots dos corredores
-├── render.yaml                   # Configuração de deploy no Render.com
 ├── .env.example                  # Modelos das variáveis de ambiente
 ├── package.json
 └── tsconfig.json
@@ -303,18 +317,9 @@ Terminal 2 — serve o frontend:
 npm run serve
 ```
 
-O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e `https://rt-ranking-endurance-api.onrender.com` em produção.
+O frontend detecta o ambiente automaticamente: usa `http://localhost:3001` em desenvolvimento e a URL da API de produção nos demais ambientes.
 
 Acesse `http://localhost:3000` para ver os rankings com navegação por abas e o botão "Copiar para WhatsApp".
-
-## Deploy (Render.com)
-
-O arquivo `render.yaml` configura dois serviços independentes:
-
-| Serviço | Tipo | Diretório |
-|---|---|---|
-| `rt-ranking-endurance-api` | Web (Node) | `api/` |
-| `rt-ranking-endurance-static` | Static Site | `static/` |
 
 ## Formatos de imagem suportados
 

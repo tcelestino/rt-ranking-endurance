@@ -24,11 +24,11 @@ Não há testes automatizados. A verificação é feita rodando `npm run update`
 
 ```
 rt-ranking-endurance/
-├── api/                        # Servidor Express (deployado no Render)
+├── api/                        # Servidor Express
 │   ├── src/server.ts
 │   ├── package.json
 │   └── tsconfig.json
-├── static/                     # Frontend estático (deployado no Render)
+├── static/                     # Frontend estático
 │   ├── index.html
 │   └── assets/
 │       ├── app.js
@@ -55,7 +55,6 @@ rt-ranking-endurance/
 ├── images/                     # gitignored — input local
 ├── package.json                # Scripts raiz para processor/
 ├── tsconfig.json               # rootDir ./processor
-├── render.yaml                 # Config de deploy no Render
 └── .gitignore
 ```
 
@@ -120,7 +119,7 @@ Scripts do `processor/` reaproveitados pelo backoffice exportam a função princ
 
 ### API — `api/src/server.ts`
 
-Servidor Express deployado no Render. Expõe os dados de `data/` via 4 endpoints:
+Servidor Express. Expõe os dados de `data/` via 4 endpoints:
 - `GET /api/manifest` → `data/manifest.json`
 - `GET /api/runners` → `data/runners.json`
 - `GET /api/data/:slug/female` → `data/female-{slug}.json`
@@ -130,14 +129,14 @@ Controles: CORS (variável `ALLOWED_ORIGINS`), rate limiting (60 req/min por IP)
 
 ### Frontend — `static/`
 
-Página estática deployada no Render. Carrega dados via `fetch()` para a API (`API_BASE` detectado automaticamente: `localhost:3001` em dev, URL de produção em prod).
+Página estática. Carrega dados via `fetch()` para a API (`API_BASE` detectado automaticamente: `localhost:3001` em dev, URL de produção em prod).
 
 ## Acesso a `data/` por cada parte
 
 | Quem | Como acessa | Onde roda |
 |------|-------------|-----------|
 | `processor/` | `path.resolve("data/...")` (CWD = raiz) | Local |
-| `api/src/server.ts` | `path.resolve(__dirname, "../../data")` | Render |
+| `api/src/server.ts` | `path.resolve(__dirname, "../../data")` | Produção |
 
 ## Convenções dos dados
 
