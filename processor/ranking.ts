@@ -2,10 +2,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadParticipants, normalize } from './participantsParser';
 import { getDataFilePath, getMonthName, loadMonthDataSync } from './jsonUpdater';
+import { addPaceTotals, averagePace, formatPace, PaceTotals, paceTotals } from './pace';
 
 export interface RunnerResult {
   name: string;
   km: number;
+  // pace médio ponderado pela distância (s/km); null sem atividades com pace
+  pace: number | null;
   position: number;
 }
 
@@ -26,7 +29,7 @@ export const MONTH_DISPLAY: Record<string, string> = {
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
-function rankRunners(data: { name: string; km: number }[]): RunnerResult[] {
+function rankRunners(data: Omit<RunnerResult, 'position'>[]): RunnerResult[] {
   return [...data].sort((a, b) => b.km - a.km).map((r, i) => ({ ...r, position: i + 1 }));
 }
 
@@ -69,15 +72,21 @@ export function calcMonthlyRanking(gender: 'female' | 'male', month: number, yea
   const data = loadMonthDataSync(gender, month, year);
 
   const kmMap = new Map<string, number>();
+  const paceMap = new Map<string, PaceTotals>();
   for (const record of data) {
     const totalKm = record.km.reduce((acc, val) => acc + val, 0);
     kmMap.set(normalize(record.name), totalKm);
+    paceMap.set(normalize(record.name), paceTotals(record.km, record.pace));
   }
 
-  const results = names.map((name) => ({
-    name,
-    km: kmMap.get(normalize(name)) ?? 0,
-  }));
+  const results = names.map((name) => {
+    const pace = paceMap.get(normalize(name));
+    return {
+      name,
+      km: kmMap.get(normalize(name)) ?? 0,
+      pace: pace ? averagePace(pace) : null,
+    };
+  });
 
   return rankRunners(results);
 }
@@ -87,6 +96,7 @@ export function calcAnnualRanking(year: number): RunnerResult[] {
   const allNames = [...participants.female, ...participants.male];
 
   const totals = new Map<string, number>();
+  const paces = new Map<string, PaceTotals>();
   for (const name of allNames) totals.set(normalize(name), 0);
 
   for (let month = 1; month <= 12; month++) {
@@ -95,14 +105,19 @@ export function calcAnnualRanking(year: number): RunnerResult[] {
         const key = normalize(record.name);
         const kmSum = record.km.reduce((a, b) => a + b, 0);
         totals.set(key, (totals.get(key) ?? 0) + kmSum);
+        paces.set(key, addPaceTotals(paces.get(key) ?? { km: 0, seconds: 0 }, paceTotals(record.km, record.pace)));
       }
     }
   }
 
-  const results = allNames.map((name) => ({
-    name,
-    km: totals.get(normalize(name)) ?? 0,
-  }));
+  const results = allNames.map((name) => {
+    const pace = paces.get(normalize(name));
+    return {
+      name,
+      km: totals.get(normalize(name)) ?? 0,
+      pace: pace ? averagePace(pace) : null,
+    };
+  });
 
   return rankRunners(results);
 }
@@ -114,7 +129,10 @@ export function calcTotalKm(runners: RunnerResult[]): number {
 function renderRankingSection(runners: RunnerResult[], filterZero = true): string {
   const lines = runners
     .filter((r) => !filterZero || r.km > 0)
-    .map((r) => `${r.position}. ${getMedal(r.position)}${r.name} - ${formatKm(r.km)}`);
+    .map((r) => {
+      const pace = r.pace === null ? '' : ` (${formatPace(r.pace)})`;
+      return `${r.position}. ${getMedal(r.position)}${r.name} - ${formatKm(r.km)}${pace}`;
+    });
 
   lines.push(`Total: ${formatKm(calcTotalKm(runners))}`);
 
