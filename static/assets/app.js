@@ -42,6 +42,38 @@ function formatKm(km) {
   return km === 0 ? '0km' : km.toFixed(2) + 'km';
 }
 
+function formatPace(seconds) {
+  const rounded = Math.round(seconds);
+  return Math.floor(rounded / 60) + "'" + String(rounded % 60).padStart(2, '0') + '"/km';
+}
+
+// soma só as atividades com pace (s/km), para a média ponderada pela distância
+function paceTotals(record) {
+  const pace = record.pace || [];
+  return record.km.reduce(
+    (acc, km, i) => {
+      if (km > 0 && pace[i] !== null && pace[i] !== undefined) {
+        acc.km += km;
+        acc.seconds += km * pace[i];
+      }
+      return acc;
+    },
+    { km: 0, seconds: 0 },
+  );
+}
+
+function averagePace(totals) {
+  return totals && totals.km > 0 ? Math.round(totals.seconds / totals.km) : null;
+}
+
+function paceHtml(runner) {
+  return runner.pace === null ? '' : `<span class="pace">${formatPace(runner.pace)}</span>`;
+}
+
+function paceSuffix(runner) {
+  return runner.pace === null ? '' : ' (' + formatPace(runner.pace) + ')';
+}
+
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -53,17 +85,20 @@ async function fetchJson(url) {
 
 function calcRanking(participants, data) {
   const dataMap = new Map();
+  const paceMap = new Map();
   data.forEach((d) => {
     dataMap.set(
       d.name.toLowerCase(),
       d.km.reduce((a, b) => a + b, 0),
     );
+    paceMap.set(d.name.toLowerCase(), paceTotals(d));
   });
 
   return participants
     .map((name) => ({
       name,
       km: dataMap.get(name.toLowerCase()) || 0,
+      pace: averagePace(paceMap.get(name.toLowerCase())),
     }))
     .sort((a, b) => b.km - a.km)
     .map((r, i) => ({ ...r, position: i + 1 }));
@@ -71,12 +106,16 @@ function calcRanking(participants, data) {
 
 function calcAnnualRanking(allMonthsData, runners) {
   const totals = new Map();
+  const paces = new Map();
 
   allMonthsData.forEach((monthData) => {
     [...monthData.female, ...monthData.male].forEach((record) => {
       const key = record.name.toLowerCase();
       const sum = record.km.reduce((a, b) => a + b, 0);
       totals.set(key, (totals.get(key) || 0) + sum);
+      const prev = paces.get(key) || { km: 0, seconds: 0 };
+      const current = paceTotals(record);
+      paces.set(key, { km: prev.km + current.km, seconds: prev.seconds + current.seconds });
     });
   });
 
@@ -85,6 +124,7 @@ function calcAnnualRanking(allMonthsData, runners) {
     .map((name) => ({
       name,
       km: totals.get(name.toLowerCase()) || 0,
+      pace: averagePace(paces.get(name.toLowerCase())),
     }))
     .sort((a, b) => b.km - a.km)
     .map((r, i) => ({ ...r, position: i + 1 }));
@@ -116,6 +156,7 @@ function templateRanking(title, runner) {
   <div class="section-header">🎉 ${title}</div>
   <div class="winner-row">
   <span class="name">${escapeHtml(runner.name)}</span>
+  ${paceHtml(runner)}
   <span class="km">${formatKm(runner.km)}</span>
   </div>
   </div>`;
@@ -143,6 +184,7 @@ function renderRows(runners) {
         <span class="pos">${r.position}.</span>
         ${medalHtml}
         <span class="name">${escapeHtml(r.name)}</span>
+        ${paceHtml(r)}
         ${kmHtml}
       </li>`;
     })
@@ -234,7 +276,7 @@ function buildMonthMarkdown(m) {
     return runners
       .filter((r) => r.km > 0)
       .map((r) => {
-        return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km);
+        return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km) + paceSuffix(r);
       })
       .join('\n');
   };
@@ -254,7 +296,7 @@ function buildAnnualMarkdown() {
   const section = state.annual
     .filter((r) => r.km > 0)
     .map((r) => {
-      return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km);
+      return r.position + '. ' + medal(r.position) + r.name + ' - ' + formatKm(r.km) + paceSuffix(r);
     })
     .join('\n');
   return `\n*RANKING ANUAL - ${state.year}* 🏆 🏅\n${section}\n`;
