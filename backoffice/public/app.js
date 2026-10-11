@@ -561,6 +561,7 @@ function stepRanking(offset) {
 // ---------- Gráficos ----------
 
 const CHART_JS_URL = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';
+const TOP_WINNERS = 5;
 const GENDER_LABEL = { female: 'Feminino', male: 'Masculino' };
 
 let chartJsPromise = null;
@@ -635,13 +636,44 @@ function genderDatasets(runners, field, theme) {
   }));
 }
 
-function runnerBarChart(id, runners, field, format) {
-  const ranked = runners.filter((r) => r[field] > 0).sort((a, b) => b[field] - a[field]);
+function runnerBarChart(id, runners, field, format, limit = Infinity) {
+  const ranked = runners
+    .filter((r) => r[field] > 0)
+    .sort((a, b) => b[field] - a[field])
+    .slice(0, limit);
   barChart(
     id,
     ranked.map((r) => r.name),
     genderDatasets(ranked, field, chartTheme()),
     { horizontal: true, stacked: true, integer: true, format },
+  );
+}
+
+function participationChart(runners, theme) {
+  const genders = ['female', 'male'];
+  const counts = genders.map((g) => runners.filter((r) => r.gender === g).reduce((acc, r) => acc + r.activities, 0));
+  const total = counts.reduce((acc, c) => acc + c, 0);
+  charts.push(
+    new window.Chart($('chart-participation'), {
+      type: 'pie',
+      data: {
+        labels: genders.map((g) => GENDER_LABEL[g]),
+        datasets: [{ data: counts, backgroundColor: genders.map((g) => theme.gender[g]), borderColor: theme.grid }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const pct = total ? ((ctx.parsed / total) * 100).toFixed(1).replace('.', ',') : '0';
+                return `${ctx.label}: ${plural(ctx.parsed, 'atividade', 'atividades')} (${pct}%)`;
+              },
+            },
+          },
+        },
+      },
+    }),
   );
 }
 
@@ -663,7 +695,6 @@ function renderStatsCharts(data) {
       backgroundColor: theme.gender[gender],
       data: data.months.map((m) => m[gender]),
     })),
-    { stacked: true },
   );
 
   const bestMonths = [...data.months].sort((a, b) => b.total - a.total);
@@ -681,6 +712,19 @@ function renderStatsCharts(data) {
   );
 
   runnerBarChart('chart-wins', data.runners, 'wins', formatCount('vitória', 'vitórias'));
+  runnerBarChart('chart-top-wins', data.runners, 'wins', formatCount('vitória', 'vitórias'), TOP_WINNERS);
+
+  for (const gender of ['female', 'male']) {
+    const ranked = data.runners.filter((r) => r.gender === gender && r.km > 0);
+    barChart(
+      `chart-km-${gender}`,
+      ranked.map((r) => r.name),
+      [{ label: GENDER_LABEL[gender], backgroundColor: theme.gender[gender], data: ranked.map((r) => r.km) }],
+      { horizontal: true },
+    );
+  }
+
+  participationChart(data.runners, theme);
   runnerBarChart('chart-activities', data.runners, 'activities', formatCount('atividade', 'atividades'));
   runnerBarChart('chart-active-months', data.runners, 'activeMonths', formatCount('mês', 'meses'));
 
