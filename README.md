@@ -2,7 +2,7 @@
 
 Simples monorepo para automação de atualização de rankings do clube de corrida da R&T Academia
 
-O script lê screenshots de apps de corrida (Strava, Garmin, Nike Run, etc.), extrai o km percorrido via IA, utilizando o Gemini, salva em arquivos JSON locais, disponibiliza os dados via API e gera a página estática com os rankings.
+O script lê screenshots de apps de corrida (Strava, Garmin, Nike Run, etc.), extrai o km percorrido (e o pace médio, quando aparece no print) via IA, utilizando o Gemini, salva em arquivos JSON locais, disponibiliza os dados via API e gera a página estática com os rankings.
 
 ## Fluxo
 
@@ -62,7 +62,8 @@ rt-ranking-endurance/
 │   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   ├── imageAnalyzerCloudflare.ts # Workers AI (Cloudflare): extrai km da imagem (backoffice)
-│   ├── kmPrompt.ts               # Prompt e parse do km compartilhados pelos analisadores
+│   ├── kmPrompt.ts               # Prompt e parse do km/pace compartilhados pelos analisadores
+│   ├── pace.ts                   # Parse, formatação e média ponderada do pace
 │   ├── ranking.ts                # Cálculo dos rankings mensal/anual e texto do ranking
 │   └── cacheManager.ts           # Cache de imagens por hash SHA256
 ├── backoffice/                   # Interface local para atualizar os dados (não deployado)
@@ -140,7 +141,7 @@ npm run backoffice   # abre em http://localhost:3002
 
 1. Marque os participantes que serão atualizados.
 2. Arraste as imagens de cada um para o card correspondente.
-3. Clique em **Analisar imagens** e confira/corrija os km extraídos.
+3. Clique em **Analisar imagens** e confira/corrija os km e o pace (`m:ss`, opcional) extraídos.
 4. Clique em **Revisar e salvar**, confira o resumo e confirme.
 
 Imagens já processadas (mesmo hash SHA256 em `data/.image-cache.json`) são sinalizadas e ignoradas. Depois de salvar, siga com os passos 2 e 3 do fluxo normal abaixo.
@@ -238,11 +239,11 @@ npm run update
 Saída esperada:
 
 ```
-Processando eli.png... Eli → 19.04km ✓
+Processando eli.png... Eli → 19.04km (5'45"/km) ✓
 Processando tiago.png... Tiago → 23.06km ✓
 
 Resumo:
-  eli.png → Eli (female) → 19.04km
+  eli.png → Eli (female) → 19.04km (5'45"/km)
   tiago.png → Tiago (male) → 23.06km
 ```
 

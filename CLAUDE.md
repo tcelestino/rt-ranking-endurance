@@ -42,6 +42,7 @@ rt-ranking-endurance/
 │   ├── imageAnalyzerGemini.ts
 │   ├── imageAnalyzerCloudflare.ts
 │   ├── kmPrompt.ts
+│   ├── pace.ts
 │   ├── jsonUpdater.ts
 │   ├── participantsParser.ts
 │   ├── imageFiles.ts
@@ -90,9 +91,9 @@ O projeto tem quatro partes independentes:
 **`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual
 - `GET /api/ranking?year=&month=` → `{ year, month, monthName, current, periods, female, male, annual, totals, markdown }` via `processor/ranking.ts`. Sem parâmetros usa o mês vigente (ou o período mais recente com dados); `periods` lista anos/meses existentes em `data/`; `markdown` é o texto do WhatsApp do período (`buildRankingMarkdown`); 404 para período sem dados
-- `GET /api/stats?year=` → agregados do ano para a aba "Gráficos" via `processor/stats.ts` (`buildStats`): km por mês (F/M), km por ano, atividades/meses ativos/vitórias por corredor, campeões dos meses fechados, top 5 acumulado, distribuição de distâncias e maior corrida. Sem `year` usa o ano mais recente; 404 para ano sem dados. Meses em que cada corredor tem um único valor (só o total mensal, ex.: fev–mar/2026) não entram nas métricas por atividade. O frontend carrega o Chart.js do jsDelivr sob demanda
-- `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, hash, cached }` (não grava nada)
-- `POST /api/save` `{ entries: [{ name, km, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache
+- `GET /api/stats?year=` → agregados do ano para a aba "Gráficos" via `processor/stats.ts` (`buildStats`): km por mês (F/M), km por ano, atividades/meses ativos/vitórias por corredor, campeões dos meses fechados, top 5 acumulado, distribuição de distâncias, maior corrida, melhor pace (`bestPace`) e pace médio por corredor. Sem `year` usa o ano mais recente; 404 para ano sem dados. Meses em que cada corredor tem um único valor (só o total mensal, ex.: fev–mar/2026) não entram nas métricas por atividade. O frontend carrega o Chart.js do jsDelivr sob demanda
+- `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, pace, hash, cached }` (não grava nada; `pace` em s/km ou `null`)
+- `POST /api/save` `{ entries: [{ name, km, pace, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache e pace fora de 120–1200 s/km
 - `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)
 - `DELETE /api/runners/:name` → remove de `runners.json` (JSONs mensais não são alterados)
 - `POST /api/new-month` → `removeCache` + `generateManifest` (cria JSONs do mês vigente se não existirem e regrava `manifest.json`); retorna `{ createdFiles, state }`. Responde 409 se o manifest já estiver no mês vigente (`isManifestCurrent`), evitando limpar o cache à toa
@@ -115,7 +116,9 @@ Scripts do `processor/` reaproveitados pelo backoffice exportam a função princ
 
 **`processor/stats.ts`** — estatísticas anuais para os gráficos do backoffice (`buildStats`); reaproveita `calcMonthlyRanking` e `listRankingPeriods` de `ranking.ts`.
 
-**`processor/kmPrompt.ts`** — prompt e `parseKmResponse` compartilhados entre Gemini e Cloudflare.
+**`processor/kmPrompt.ts`** — prompt (`ACTIVITY_PROMPT`, resposta em JSON `{ km, pace }`) e `parseActivityResponse` compartilhados entre Gemini e Cloudflare.
+
+**`processor/pace.ts`** — `parsePace` (`5:45`, `5'45"` → segundos), `formatPace` (`5'45"/km`), `paceTotals`/`averagePace` (média ponderada pela distância).
 
 ### API — `api/src/server.ts`
 
@@ -141,9 +144,11 @@ Página estática. Carrega dados via `fetch()` para a API (`API_BASE` detectado 
 ## Convenções dos dados
 
 - **Arquivos de dados**: `data/female-[mes].json` e `data/male-[mes].json`
-  - Formato: `[{ "name": "Eli", "km": [19.04, 5.30] }]`
+  - Formato: `[{ "name": "Eli", "km": [19.04, 5.30], "pace": [345, null] }]`
   - O campo `km` é um array — cada imagem processada adiciona um item
   - Total do corredor no mês = soma de todos os valores do array
+  - O campo `pace` (opcional) é paralelo ao `km`: pace médio da atividade em segundos/km ou `null` quando o print não mostra. Só é criado no primeiro pace registrado do corredor no mês (atividades anteriores ficam `null`)
+  - Pace médio do corredor = `Σ(km × pace) / Σ km`, só com atividades que têm pace; aparece no ranking, no texto do WhatsApp, na aba Gráficos e no site público
 - **Lista de participantes**: `data/runners.json` — objeto com chaves `female` e `male` (arrays de nomes)
 - O mês atual é detectado pela data do sistema. Pode ser sobrescrito com `CURRENT_MONTH=4` no `.env`
 

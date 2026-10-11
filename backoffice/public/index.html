@@ -209,6 +209,10 @@
             <dt>Maior corrida</dt>
             <dd id="kpi-longest"></dd>
           </div>
+          <div class="stats-kpi">
+            <dt>Melhor pace</dt>
+            <dd id="kpi-best-pace"></dd>
+          </div>
         </dl>
 
         <div class="stats-grid">
@@ -239,6 +243,10 @@
           <section class="ranking-card" aria-labelledby="chart-active-months-title">
             <h3 id="chart-active-months-title">Meses ativos por corredor</h3>
             <div class="chart-box chart-box-tall"><canvas id="chart-active-months"></canvas></div>
+          </section>
+          <section class="ranking-card" aria-labelledby="chart-pace-title">
+            <h3 id="chart-pace-title">Pace médio por corredor</h3>
+            <div class="chart-box chart-box-tall"><canvas id="chart-pace"></canvas></div>
           </section>
           <section class="ranking-card" aria-labelledby="chart-active-runners-title">
             <h3 id="chart-active-runners-title">Corredores ativos por mês</h3>
@@ -280,6 +288,10 @@
           <label class="image-km">
             <input type="number" step="0.01" min="0" placeholder="km" />
             <span>km</span>
+          </label>
+          <label class="image-pace">
+            <input type="text" inputmode="numeric" placeholder="m:ss" aria-label="Pace médio (min/km)" />
+            <span>min/km</span>
           </label>
           <span class="image-status"></span>
         </div>

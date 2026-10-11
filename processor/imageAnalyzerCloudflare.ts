@@ -1,4 +1,4 @@
-import { KM_PROMPT, parseKmResponse } from './kmPrompt';
+import { ACTIVITY_PROMPT, ActivityResult, parseActivityResponse } from './kmPrompt';
 
 const DEFAULT_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
 
@@ -17,7 +17,7 @@ function getConfig() {
   return { accountId, apiToken, model: process.env.CLOUDFLARE_AI_MODEL || DEFAULT_MODEL };
 }
 
-export async function extractKmFromImageBuffer(buffer: Buffer, mimeType: string): Promise<number> {
+export async function extractActivityFromImageBuffer(buffer: Buffer, mimeType: string): Promise<ActivityResult> {
   const { accountId, apiToken, model } = getConfig();
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`;
 
@@ -29,12 +29,12 @@ export async function extractKmFromImageBuffer(buffer: Buffer, mimeType: string)
         {
           role: 'user',
           content: [
-            { type: 'text', text: KM_PROMPT },
+            { type: 'text', text: ACTIVITY_PROMPT },
             { type: 'image_url', image_url: { url: `data:${mimeType};base64,${buffer.toString('base64')}` } },
           ],
         },
       ],
-      max_tokens: 20,
+      max_tokens: 60,
     }),
   });
 
@@ -48,5 +48,5 @@ export async function extractKmFromImageBuffer(buffer: Buffer, mimeType: string)
   if (response === undefined || response === null) {
     throw new Error('Workers AI não retornou resposta');
   }
-  return parseKmResponse(String(response));
+  return parseActivityResponse(String(response));
 }

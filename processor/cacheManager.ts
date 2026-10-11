@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 
 interface CacheEntry {
   km: number;
+  pace?: number | null;
   date: string; // "YYYY-MM-DD"
   filename: string;
 }
