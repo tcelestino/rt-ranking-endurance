@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Comandos
 
 ```bash
+npm test             # testes da camada de logs
 npm run update       # processa imagens em images/ e salva km nos JSONs
 npm run generate:manifest # lê data/*.json e gera data/manifest.json
 npm run clear:images # remove todos os arquivos de imagem da pasta images/
@@ -18,7 +19,7 @@ npm run backoffice:check # verifica tipos do backoffice
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
-Não há testes automatizados. A verificação é feita rodando `npm run update` com imagens reais em `images/` e depois `npm run generate:manifest`.
+Há testes automatizados (`npm test`, `node:test` via `tsx`) apenas para a camada de logs (logger, request logger e cache). O restante é verificado rodando `npm run update` com imagens reais em `images/` e depois `npm run generate:manifest`.
 
 ## Estrutura
 
@@ -106,6 +107,12 @@ O projeto tem quatro partes independentes:
 - `GET /api/config` é público e retorna `{ publishableKey }`; o `app.js` carrega o Clerk JS pelo Frontend API (domínio extraído da chave), exibe o `SignIn` e envia `Authorization: Bearer <session token>` em todas as chamadas (`apiFetch`).
 - Demais rotas `/api/*` passam por `clerkMiddleware()` + `requireAdmin`: 401 sem sessão válida, 403 se `publicMetadata.role` não for `"admin"`.
 - Configuração no dashboard do Clerk: login só com Google; Restrictions > Allowlist com os emails permitidos; Sessions > Customize session token com `{ "metadata": "{{user.public_metadata}}" }`; após o primeiro login, definir `publicMetadata` = `{ "role": "admin" }` no usuário.
+
+**Logs (Pino)** — `processor/logger.ts` (`createLogger`, `logger`) e `backoffice/src/requestLogger.ts` (`pino-http`). JSON no stdout; pretty-print só em TTY fora de produção.
+- Variáveis: `LOG_LEVEL` (padrão `info` no backoffice, `silent` nos CLIs de `processor/`), `LOG_PRETTY=false` para forçar JSON, `OTEL_SERVICE_NAME` (padrão `rt-ranking-backoffice`).
+- Cada requisição `/api/*` gera uma linha com `reqId` (também devolvido em `x-request-id`) e `userId`; `req.log` carrega esses campos nos logs de negócio. Headers, cookies e corpos nunca são logados.
+- Erros usam a chave `err`; eventos de negócio têm `msg` estável (ex.: `registros salvos`, `publicação falhou`).
+- Preparado para OTel: adicionar `@opentelemetry/instrumentation-pino` injeta `trace_id`/`span_id` automaticamente, sem alterar as chamadas de log.
 
 Scripts do `processor/` reaproveitados pelo backoffice exportam a função principal e só executam `main()` com `if (require.main === module)`.
 
