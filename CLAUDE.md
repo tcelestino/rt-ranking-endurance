@@ -19,7 +19,7 @@ npm run backoffice:check # verifica tipos do backoffice
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
-Há testes automatizados (`npm test`, `node:test` via `tsx`) apenas para a camada de logs (logger, request logger e cache). O restante é verificado rodando `npm run update` com imagens reais em `images/` e depois `npm run generate:manifest`.
+Há testes automatizados (`npm test`, `node:test` via `tsx`) apenas para a camada de logs (logger, request logger, tratamento de erros e cache). O restante é verificado rodando `npm run update` com imagens reais em `images/` e depois `npm run generate:manifest`.
 
 ## Estrutura
 
@@ -110,7 +110,7 @@ O projeto tem quatro partes independentes:
 
 **Logs (Pino)** — `processor/logger.ts` (`createLogger`, `logger`) e `backoffice/src/requestLogger.ts` (`pino-http`). JSON no stdout; pretty-print só em TTY fora de produção.
 - Variáveis: `LOG_LEVEL` (padrão `info` no backoffice, `silent` nos CLIs de `processor/`), `LOG_PRETTY=false` para forçar JSON, `OTEL_SERVICE_NAME` (padrão `rt-ranking-backoffice`).
-- Cada requisição `/api/*` gera uma linha com `reqId` (também devolvido em `x-request-id`) e `userId`; `req.log` carrega esses campos nos logs de negócio. Headers, cookies e corpos nunca são logados.
+- Cada requisição `/api/*` gera uma linha com `req.id` (também devolvido em `x-request-id`) e `userId`; `req.log` carrega esses campos nos logs de negócio. Headers, cookies e corpos nunca são logados.
 - Erros usam a chave `err`; eventos de negócio têm `msg` estável (ex.: `registros salvos`, `publicação falhou`).
 - Preparado para OTel: adicionar `@opentelemetry/instrumentation-pino` injeta `trace_id`/`span_id` automaticamente, sem alterar as chamadas de log.
 

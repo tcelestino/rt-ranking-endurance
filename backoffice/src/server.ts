@@ -1,11 +1,13 @@
 import './env';
 import { execFile } from 'child_process';
 import { clerkMiddleware } from '@clerk/express';
-import express, { NextFunction, Request, Response } from 'express';
+import express from 'express';
 import path from 'path';
 import { promisify } from 'util';
 import { assertClerkEnv, getUserSummary, requireAdmin } from './auth';
 import { logger } from '../../processor/logger';
+import { errorHandler, HttpError } from './errorHandler';
+import { summarizeExecError } from './logSafe';
 import { createRequestLogger } from './requestLogger';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
@@ -39,15 +41,6 @@ interface SaveEntry {
   filename: string;
 }
 
-class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
 const PORT = Number(process.env.BACKOFFICE_PORT) || 3002;
 const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const DEPLOY_TIMEOUT_MS = 5 * 60 * 1000;
@@ -58,9 +51,10 @@ let publishing = false;
 const CLERK_PUBLISHABLE_KEY = assertClerkEnv();
 
 const app = express();
-app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.resolve(__dirname, '../public')));
+// o logger vem antes do parser do corpo: erros de parse (JSON inválido, corpo grande) também precisam de req.log
 app.use(createRequestLogger(logger));
+app.use(express.json({ limit: '20mb' }));
 
 // público: o frontend precisa da chave para carregar o Clerk antes do login
 app.get('/api/config', (_req, res) => {
@@ -348,7 +342,7 @@ app.post('/api/publish', async (req, res, next) => {
         const { stdout = '', stderr = '', message } = err as { stdout?: string; stderr?: string; message: string };
         const log = `${stdout}${stderr}` || message;
         req.log.error(
-          { err, autoMerge, durationMs: Date.now() - startedAt, deployLogTail: log.slice(-2000) },
+          { ...summarizeExecError(err), autoMerge, durationMs: Date.now() - startedAt, deployLogTail: log.slice(-2000) },
           'publicação falhou',
         );
         res.status(500).json({ error: 'Falha ao publicar. Confira o log.', log, prUrl: extractPrUrl(log) });
@@ -365,16 +359,7 @@ function extractPrUrl(log: string): string | null {
   return log.match(/https:\/\/github\.com\/[^\s]+\/pull\/\d+/)?.[0] ?? null;
 }
 
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  const status = err instanceof HttpError ? err.status : 500;
-  const message = err instanceof Error ? err.message : String(err);
-  if (status >= 500) {
-    req.log.error({ err, status }, message);
-  } else {
-    req.log.warn({ status }, message);
-  }
-  res.status(status).json({ error: message });
-});
+app.use(errorHandler);
 
 const server = app.listen(PORT, '127.0.0.1', () => {
   logger.info({ port: PORT, logLevel: logger.level, node: process.version }, `Backoffice rodando em http://localhost:${PORT}`);

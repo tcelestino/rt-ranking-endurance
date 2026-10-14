@@ -27,6 +27,8 @@ export function createRequestLogger(logger: Logger) {
     },
     customSuccessMessage: (req, res) => `${req.method} ${requestUrl(req)} ${res.statusCode}`,
     customErrorMessage: (req, res) => `${req.method} ${requestUrl(req)} ${res.statusCode} falhou`,
+    // userId é definido em res.locals pelo requireAdmin, depois da criação do req.log
+    customProps: (_req, res) => ({ userId: (res as { locals?: { userId?: string } }).locals?.userId }),
     // só o necessário: nunca headers nem corpo
     serializers: {
       req: (req) => ({ id: req.id, method: req.method, url: req.url }),
