@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 import { execFile } from 'child_process';
 import { clerkMiddleware } from '@clerk/express';
 import express, { NextFunction, Request, Response } from 'express';
