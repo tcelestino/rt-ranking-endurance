@@ -21,14 +21,16 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
   const metadata = auth.sessionClaims?.metadata as { role?: unknown } | undefined;
   if (metadata?.role !== ADMIN_ROLE) {
-    console.warn(
-      `[auth] usuário ${auth.userId} sem role "${ADMIN_ROLE}" tentou acessar ${req.method} ${req.originalUrl}`,
+    req.log.warn(
+      { userId: auth.userId, method: req.method, url: req.originalUrl },
+      `acesso negado: usuário sem role "${ADMIN_ROLE}"`,
     );
     res.status(403).json({ error: 'Seu usuário não tem permissão para acessar o backoffice.' });
     return;
   }
 
   res.locals.userId = auth.userId;
+  req.log = req.log.child({ userId: auth.userId });
   next();
 }
 

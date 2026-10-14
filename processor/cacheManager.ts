@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import type { Logger } from 'pino';
+import { logger } from './logger';
 
 interface CacheEntry {
   km: number;
@@ -20,11 +22,14 @@ export function computeHashFromBuffer(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
-function loadCache(): CacheFile {
-  if (!fs.existsSync(CACHE_PATH)) return {};
+const log = logger.child({ module: 'cacheManager' });
+
+export function loadCache(cachePath: string = CACHE_PATH, cacheLog: Logger = log): CacheFile {
+  if (!fs.existsSync(cachePath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8')) as CacheFile;
-  } catch {
+    return JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as CacheFile;
+  } catch (err) {
+    cacheLog.warn({ err, path: cachePath }, 'cache de imagens ilegível; ignorando e usando cache vazio');
     return {};
   }
 }

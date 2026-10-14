@@ -1,10 +1,14 @@
-import 'dotenv/config';
+import './env';
 import { execFile } from 'child_process';
 import { clerkMiddleware } from '@clerk/express';
-import express, { NextFunction, Request, Response } from 'express';
+import express from 'express';
 import path from 'path';
 import { promisify } from 'util';
 import { assertClerkEnv, getUserSummary, requireAdmin } from './auth';
+import { logger } from '../../processor/logger';
+import { errorHandler, HttpError } from './errorHandler';
+import { summarizeExecError } from './logSafe';
+import { createRequestLogger } from './requestLogger';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
@@ -37,15 +41,6 @@ interface SaveEntry {
   filename: string;
 }
 
-class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
 const PORT = Number(process.env.BACKOFFICE_PORT) || 3002;
 const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const DEPLOY_TIMEOUT_MS = 5 * 60 * 1000;
@@ -56,8 +51,10 @@ let publishing = false;
 const CLERK_PUBLISHABLE_KEY = assertClerkEnv();
 
 const app = express();
-app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.resolve(__dirname, '../public')));
+// o logger vem antes do parser do corpo: erros de parse (JSON inválido, corpo grande) também precisam de req.log
+app.use(createRequestLogger(logger));
+app.use(express.json({ limit: '20mb' }));
 
 // público: o frontend precisa da chave para carregar o Clerk antes do login
 app.get('/api/config', (_req, res) => {
@@ -178,19 +175,26 @@ app.get('/api/stats', (req, res, next) => {
 app.post('/api/analyze', async (req, res, next) => {
   try {
     const { name, mimeType, data } = req.body ?? {};
-    resolveParticipant(name);
+    const { canonicalName } = resolveParticipant(name);
     if (!SUPPORTED_MIME_TYPES.includes(mimeType)) throw new HttpError(400, `Formato não suportado: ${mimeType}`);
     if (typeof data !== 'string' || !data) throw new HttpError(400, 'Imagem vazia');
 
     const buffer = Buffer.from(data, 'base64');
     const hash = computeHashFromBuffer(buffer);
+    const hashPrefix = hash.slice(0, 12);
     const cachedEntry = getCached(hash);
     if (cachedEntry) {
+      req.log.info({ runner: canonicalName, hash: hashPrefix, km: cachedEntry.km }, 'imagem encontrada no cache');
       res.json({ km: cachedEntry.km, hash, cached: true, cachedEntry });
       return;
     }
 
+    const startedAt = Date.now();
     const km = await extractKmFromImageBuffer(buffer, mimeType);
+    req.log.info(
+      { runner: canonicalName, hash: hashPrefix, km, mimeType, imageBytes: buffer.length, durationMs: Date.now() - startedAt },
+      'km extraído da imagem',
+    );
     res.json({ km, hash, cached: false });
   } catch (err) {
     next(err);
@@ -234,6 +238,16 @@ app.post('/api/save', async (req, res, next) => {
       }
     }
 
+    req.log.info(
+      {
+        month,
+        entries: entries.length,
+        female: byGender.female.length,
+        male: byGender.male.length,
+        totalKm: Number(entries.reduce((sum, e) => sum + e.km, 0).toFixed(2)),
+      },
+      'registros salvos',
+    );
     res.json(await buildState());
   } catch (err) {
     next(err);
@@ -252,6 +266,7 @@ app.post('/api/runners', async (req, res, next) => {
 
     addParticipant(participants, name, gender);
     saveParticipants(participants);
+    req.log.info({ runner: name.trim(), gender }, 'participante adicionado');
     res.json(await buildState());
   } catch (err) {
     next(err);
@@ -264,13 +279,14 @@ app.delete('/api/runners/:name', async (req, res, next) => {
     const participants = loadParticipants();
     removeParticipant(participants, canonicalName);
     saveParticipants(participants);
+    req.log.info({ runner: canonicalName }, 'participante removido');
     res.json(await buildState());
   } catch (err) {
     next(err);
   }
 });
 
-app.post('/api/new-month', async (_req, res, next) => {
+app.post('/api/new-month', async (req, res, next) => {
   try {
     if (isManifestCurrent()) {
       const month = getCurrentMonth();
@@ -278,6 +294,7 @@ app.post('/api/new-month', async (_req, res, next) => {
     }
     removeCache();
     const { createdFiles } = generateManifest();
+    req.log.info({ month: getCurrentMonth(), createdFiles }, 'novo mês gerado');
     res.json({ createdFiles, state: await buildState() });
   } catch (err) {
     next(err);
@@ -310,17 +327,24 @@ app.post('/api/publish', async (req, res, next) => {
     if (pendingChanges.length === 0) throw new HttpError(409, 'Nenhuma alteração em data/ para publicar');
 
     publishing = true;
+    const startedAt = Date.now();
+    req.log.info({ autoMerge, pendingFiles: pendingChanges.length }, 'publicação iniciada');
     try {
       const markdown = writeRankingMarkdown();
       const args = ['scripts/deploy.sh', ...(autoMerge ? [] : ['--no-merge'])];
       try {
         const { stdout, stderr } = await execFileAsync('bash', args, { timeout: DEPLOY_TIMEOUT_MS });
         const log = `${stdout}${stderr}`;
-        res.json({ log, prUrl: extractPrUrl(log), markdown });
+        const prUrl = extractPrUrl(log);
+        req.log.info({ autoMerge, prUrl, durationMs: Date.now() - startedAt }, 'publicação concluída');
+        res.json({ log, prUrl, markdown });
       } catch (err) {
         const { stdout = '', stderr = '', message } = err as { stdout?: string; stderr?: string; message: string };
         const log = `${stdout}${stderr}` || message;
-        console.error(`[POST /api/publish] deploy.sh falhou: ${message}`);
+        req.log.error(
+          { ...summarizeExecError(err), autoMerge, durationMs: Date.now() - startedAt, deployLogTail: log.slice(-2000) },
+          'publicação falhou',
+        );
         res.status(500).json({ error: 'Falha ao publicar. Confira o log.', log, prUrl: extractPrUrl(log) });
       }
     } finally {
@@ -335,13 +359,24 @@ function extractPrUrl(log: string): string | null {
   return log.match(/https:\/\/github\.com\/[^\s]+\/pull\/\d+/)?.[0] ?? null;
 }
 
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  const status = err instanceof HttpError ? err.status : 500;
-  const message = err instanceof Error ? err.message : String(err);
-  console.error(`[${req.method} ${req.path}] ${status}: ${message}`);
-  res.status(status).json({ error: message });
+app.use(errorHandler);
+
+const server = app.listen(PORT, '127.0.0.1', () => {
+  logger.info({ port: PORT, logLevel: logger.level, node: process.version }, `Backoffice rodando em http://localhost:${PORT}`);
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Backoffice rodando em http://localhost:${PORT}`);
+function shutdown(signal: string) {
+  logger.info({ signal }, 'encerrando backoffice');
+  server.close(() => process.exit(0));
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'exceção não tratada');
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ err: reason instanceof Error ? reason : new Error(String(reason)) }, 'promise rejeitada sem tratamento');
+  process.exit(1);
 });
