@@ -181,19 +181,26 @@ app.get('/api/stats', (req, res, next) => {
 app.post('/api/analyze', async (req, res, next) => {
   try {
     const { name, mimeType, data } = req.body ?? {};
-    resolveParticipant(name);
+    const { canonicalName } = resolveParticipant(name);
     if (!SUPPORTED_MIME_TYPES.includes(mimeType)) throw new HttpError(400, `Formato não suportado: ${mimeType}`);
     if (typeof data !== 'string' || !data) throw new HttpError(400, 'Imagem vazia');
 
     const buffer = Buffer.from(data, 'base64');
     const hash = computeHashFromBuffer(buffer);
+    const hashPrefix = hash.slice(0, 12);
     const cachedEntry = getCached(hash);
     if (cachedEntry) {
+      req.log.info({ runner: canonicalName, hash: hashPrefix, km: cachedEntry.km }, 'imagem encontrada no cache');
       res.json({ km: cachedEntry.km, hash, cached: true, cachedEntry });
       return;
     }
 
+    const startedAt = Date.now();
     const km = await extractKmFromImageBuffer(buffer, mimeType);
+    req.log.info(
+      { runner: canonicalName, hash: hashPrefix, km, mimeType, imageBytes: buffer.length, durationMs: Date.now() - startedAt },
+      'km extraído da imagem',
+    );
     res.json({ km, hash, cached: false });
   } catch (err) {
     next(err);
@@ -237,6 +244,16 @@ app.post('/api/save', async (req, res, next) => {
       }
     }
 
+    req.log.info(
+      {
+        month,
+        entries: entries.length,
+        female: byGender.female.length,
+        male: byGender.male.length,
+        totalKm: Number(entries.reduce((sum, e) => sum + e.km, 0).toFixed(2)),
+      },
+      'registros salvos',
+    );
     res.json(await buildState());
   } catch (err) {
     next(err);
@@ -255,6 +272,7 @@ app.post('/api/runners', async (req, res, next) => {
 
     addParticipant(participants, name, gender);
     saveParticipants(participants);
+    req.log.info({ runner: name.trim(), gender }, 'participante adicionado');
     res.json(await buildState());
   } catch (err) {
     next(err);
@@ -267,13 +285,14 @@ app.delete('/api/runners/:name', async (req, res, next) => {
     const participants = loadParticipants();
     removeParticipant(participants, canonicalName);
     saveParticipants(participants);
+    req.log.info({ runner: canonicalName }, 'participante removido');
     res.json(await buildState());
   } catch (err) {
     next(err);
   }
 });
 
-app.post('/api/new-month', async (_req, res, next) => {
+app.post('/api/new-month', async (req, res, next) => {
   try {
     if (isManifestCurrent()) {
       const month = getCurrentMonth();
@@ -281,6 +300,7 @@ app.post('/api/new-month', async (_req, res, next) => {
     }
     removeCache();
     const { createdFiles } = generateManifest();
+    req.log.info({ month: getCurrentMonth(), createdFiles }, 'novo mês gerado');
     res.json({ createdFiles, state: await buildState() });
   } catch (err) {
     next(err);
@@ -313,16 +333,24 @@ app.post('/api/publish', async (req, res, next) => {
     if (pendingChanges.length === 0) throw new HttpError(409, 'Nenhuma alteração em data/ para publicar');
 
     publishing = true;
+    const startedAt = Date.now();
+    req.log.info({ autoMerge, pendingFiles: pendingChanges.length }, 'publicação iniciada');
     try {
       const markdown = writeRankingMarkdown();
       const args = ['scripts/deploy.sh', ...(autoMerge ? [] : ['--no-merge'])];
       try {
         const { stdout, stderr } = await execFileAsync('bash', args, { timeout: DEPLOY_TIMEOUT_MS });
         const log = `${stdout}${stderr}`;
-        res.json({ log, prUrl: extractPrUrl(log), markdown });
+        const prUrl = extractPrUrl(log);
+        req.log.info({ autoMerge, prUrl, durationMs: Date.now() - startedAt }, 'publicação concluída');
+        res.json({ log, prUrl, markdown });
       } catch (err) {
         const { stdout = '', stderr = '', message } = err as { stdout?: string; stderr?: string; message: string };
         const log = `${stdout}${stderr}` || message;
+        req.log.error(
+          { err, autoMerge, durationMs: Date.now() - startedAt, deployLogTail: log.slice(-2000) },
+          'publicação falhou',
+        );
         res.status(500).json({ error: 'Falha ao publicar. Confira o log.', log, prUrl: extractPrUrl(log) });
       }
     } finally {
