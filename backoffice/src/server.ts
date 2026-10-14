@@ -5,6 +5,8 @@ import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { promisify } from 'util';
 import { assertClerkEnv, getUserSummary, requireAdmin } from './auth';
+import { logger } from '../../processor/logger';
+import { createRequestLogger } from './requestLogger';
 import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
@@ -58,6 +60,7 @@ const CLERK_PUBLISHABLE_KEY = assertClerkEnv();
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.resolve(__dirname, '../public')));
+app.use(createRequestLogger(logger));
 
 // público: o frontend precisa da chave para carregar o Clerk antes do login
 app.get('/api/config', (_req, res) => {
@@ -320,7 +323,6 @@ app.post('/api/publish', async (req, res, next) => {
       } catch (err) {
         const { stdout = '', stderr = '', message } = err as { stdout?: string; stderr?: string; message: string };
         const log = `${stdout}${stderr}` || message;
-        console.error(`[POST /api/publish] deploy.sh falhou: ${message}`);
         res.status(500).json({ error: 'Falha ao publicar. Confira o log.', log, prUrl: extractPrUrl(log) });
       }
     } finally {
@@ -338,10 +340,30 @@ function extractPrUrl(log: string): string | null {
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const status = err instanceof HttpError ? err.status : 500;
   const message = err instanceof Error ? err.message : String(err);
-  console.error(`[${req.method} ${req.path}] ${status}: ${message}`);
+  if (status >= 500) {
+    req.log.error({ err, status }, message);
+  } else {
+    req.log.warn({ status }, message);
+  }
   res.status(status).json({ error: message });
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Backoffice rodando em http://localhost:${PORT}`);
+const server = app.listen(PORT, '127.0.0.1', () => {
+  logger.info({ port: PORT, logLevel: logger.level, node: process.version }, `Backoffice rodando em http://localhost:${PORT}`);
+});
+
+function shutdown(signal: string) {
+  logger.info({ signal }, 'encerrando backoffice');
+  server.close(() => process.exit(0));
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'exceção não tratada');
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ err: reason instanceof Error ? reason : new Error(String(reason)) }, 'promise rejeitada sem tratamento');
+  process.exit(1);
 });
