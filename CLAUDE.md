@@ -36,7 +36,7 @@ rt-ranking-endurance/
 │       └── style.css
 ├── backoffice/                 # Interface local (não deployado)
 │   ├── src/server.ts
-│   ├── public/                 # index.html, app.js, style.css
+│   ├── public/                 # index.html, app.js, scroll.js, style.css
 │   └── tsconfig.json           # noEmit, inclui ../processor
 ├── processor/                  # CLI local (não deployado)
 │   ├── index.ts
