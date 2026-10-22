@@ -22,6 +22,8 @@ let nextImageId = 1;
 
 const $ = (id) => document.getElementById(id);
 
+const scroller = createScrollController({ doc: document, win: window });
+
 function formatKm(value) {
   return `${value.toFixed(2).replace('.', ',')} km`;
 }
@@ -112,6 +114,7 @@ function toggleRunner(name, checked) {
   }
   closeConfirm();
   renderCards();
+  if (checked) scroller.scrollToElement($('cards').lastElementChild);
 }
 
 // ---------- Cards de cada participante ----------
@@ -316,6 +319,7 @@ async function save() {
     closeConfirm();
     refreshRunnerViews();
     showMessage(`${entries.length} registro(s) salvo(s) em ${state.monthName}/${state.year}.`, 'success');
+    scroller.scrollToTop();
   } catch (err) {
     showMessage(err.message);
   } finally {
