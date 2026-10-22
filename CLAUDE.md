@@ -108,6 +108,8 @@ O projeto tem quatro partes independentes:
 - Demais rotas `/api/*` passam por `clerkMiddleware()` + `requireAdmin`: 401 sem sessão válida, 403 se `publicMetadata.role` não for `"admin"`.
 - Configuração no dashboard do Clerk: login só com Google; Restrictions > Allowlist com os emails permitidos; Sessions > Customize session token com `{ "metadata": "{{user.public_metadata}}" }`; após o primeiro login, definir `publicMetadata` = `{ "role": "admin" }` no usuário.
 
+**Scroll** — `backoffice/public/scroll.js` (`createScrollController`): ao marcar um participante rola suavemente até o card novo (só se não estiver visível) e, após salvar, sobe ao topo para o botão "Publicar". Com a aba oculta (Page Visibility API) a rolagem fica pendente até a aba voltar a ficar visível; respeita `prefers-reduced-motion`.
+
 **Logs (Pino)** — `processor/logger.ts` (`createLogger`, `logger`) e `backoffice/src/requestLogger.ts` (`pino-http`). JSON no stdout; pretty-print só em TTY fora de produção.
 - Variáveis: `LOG_LEVEL` (padrão `info` no backoffice, `silent` nos CLIs de `processor/`), `LOG_PRETTY=false` para forçar JSON, `OTEL_SERVICE_NAME` (padrão `rt-ranking-backoffice`).
 - Cada requisição `/api/*` gera uma linha com `req.id` (também devolvido em `x-request-id`) e `userId`; `req.log` carrega esses campos nos logs de negócio. Headers, cookies e corpos nunca são logados.
