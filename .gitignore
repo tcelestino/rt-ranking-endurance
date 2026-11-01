@@ -10,3 +10,6 @@ output/
 # credentials and environment variables
 credentials.json
 .env
+
+# planos gerados por agentes
+docs/superpowers/
