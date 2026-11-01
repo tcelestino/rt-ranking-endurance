@@ -92,7 +92,9 @@ if gh pr merge "$PR_URL" \
   --body "$COMMIT_MSG" \
   --delete-branch; then
   git checkout "$BASE_BRANCH"
-  git pull
+  if ! git pull --autostash; then
+    echo "Aviso: o PR foi mergeado, mas 'git pull' na $BASE_BRANCH falhou. Atualize manualmente com 'git pull'." >&2
+  fi
   git branch -D "$BRANCH_NAME" 2>/dev/null || true
   echo "Deploy concluído: PR '$PR_TITLE' mergeado com squash."
 else
