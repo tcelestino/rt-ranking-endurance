@@ -6,6 +6,7 @@ import { logger } from './logger';
 
 interface CacheEntry {
   km: number;
+  pace?: number | null;
   date: string; // "YYYY-MM-DD"
   filename: string;
 }

@@ -1,5 +1,6 @@
 import { loadParticipants, normalize } from './participantsParser';
 import { getMonthName, loadMonthDataSync } from './jsonUpdater';
+import { averagePace } from './pace';
 import { calcMonthlyRanking, listRankingPeriods, MONTH_DISPLAY } from './ranking';
 import { capitalizeFirstLetter, getCurrentMonth } from './utils';
 
@@ -24,9 +25,16 @@ interface Runner {
 // atividades (km > 0) de cada corredor em um mês, indexadas pelo nome normalizado
 type MonthActivities = Map<string, number[]>;
 
+interface PacedActivity {
+  km: number;
+  pace: number;
+}
+
 interface MonthData {
   month: number;
   activities: MonthActivities;
+  // só as atividades com pace registrado
+  paced: Map<string, PacedActivity[]>;
   // false quando o mês guarda só o total mensal de cada corredor (um valor por pessoa), sem as corridas
   detailed: boolean;
 }
@@ -49,6 +57,7 @@ export interface RunnerStats {
   activities: number;
   activeMonths: number;
   wins: number;
+  pace: number | null;
 }
 
 export interface MonthWinner {
@@ -73,6 +82,7 @@ export interface Stats {
   cumulativeTop5: { name: string; gender: Gender; values: number[] }[];
   distances: { label: string; count: number }[];
   longestRun: { name: string; km: number; month: number; monthName: string } | null;
+  bestPace: { name: string; pace: number; km: number; month: number; monthName: string } | null;
 }
 
 const sum = (values: number[]) => values.reduce((acc, v) => acc + v, 0);
@@ -89,15 +99,20 @@ function loadRunners(): Runner[] {
 function loadMonth(month: number, year: number, runners: Runner[]): MonthData {
   const known = new Set(runners.map((r) => r.key));
   const activities: MonthActivities = new Map();
+  const paced = new Map<string, PacedActivity[]>();
   for (const gender of GENDERS) {
     for (const record of loadMonthDataSync(gender, month, year)) {
       const key = normalize(record.name);
       if (!known.has(key)) continue;
       activities.set(key, [...(activities.get(key) ?? []), ...record.km.filter((km) => km > 0)]);
+      const withPace = record.km
+        .map((km, i) => ({ km, pace: record.pace?.[i] ?? null }))
+        .filter((a): a is PacedActivity => a.km > 0 && a.pace !== null);
+      paced.set(key, [...(paced.get(key) ?? []), ...withPace]);
     }
   }
   const detailed = [...activities.values()].some((kms) => kms.length > 1);
-  return { month, activities, detailed };
+  return { month, activities, paced, detailed };
 }
 
 function isClosed(month: number, year: number): boolean {
@@ -107,6 +122,14 @@ function isClosed(month: number, year: number): boolean {
 
 function runnerKm(data: MonthData, runner: Runner): number[] {
   return data.activities.get(runner.key) ?? [];
+}
+
+function runnerPaced(data: MonthData, runner: Runner): PacedActivity[] {
+  return data.paced.get(runner.key) ?? [];
+}
+
+function paceOf(activities: PacedActivity[]): number | null {
+  return averagePace({ km: sum(activities.map((a) => a.km)), seconds: sum(activities.map((a) => a.km * a.pace)) });
 }
 
 function buildMonthStats(data: MonthData, year: number, runners: Runner[]): MonthStats {
@@ -158,6 +181,7 @@ function buildRunnerStats(months: MonthData[], runners: Runner[], winners: Month
         activities: sum(detailedMonths.map((kms) => kms.length)),
         activeMonths: perMonth.filter((kms) => kms.length > 0).length,
         wins: winnerNames.filter((name) => name === runner.name).length,
+        pace: paceOf(months.flatMap((data) => runnerPaced(data, runner))),
       };
     })
     .sort((a, b) => b.km - a.km);
@@ -199,6 +223,20 @@ function findLongestRun(months: MonthData[], runners: Runner[]): Stats['longestR
   return longest;
 }
 
+function findBestPace(months: MonthData[], runners: Runner[]): Stats['bestPace'] {
+  let best: Stats['bestPace'] = null;
+  for (const data of months) {
+    for (const runner of runners) {
+      for (const { km, pace } of runnerPaced(data, runner)) {
+        if (!best || pace < best.pace) {
+          best = { name: runner.name, pace, km, month: data.month, monthName: displayMonthName(data.month) };
+        }
+      }
+    }
+  }
+  return best;
+}
+
 function calcYearTotal(year: number, months: number[], runners: Runner[]): number {
   return sum(months.map((month) => sum([...loadMonth(month, year, runners).activities.values()].map(sum))));
 }
@@ -223,5 +261,6 @@ export function buildStats(year: number): Stats {
     cumulativeTop5: buildCumulativeTop(months, runners, ranked),
     distances: buildDistances(months),
     longestRun: findLongestRun(months, runners),
+    bestPace: findBestPace(months, runners),
   };
 }

@@ -5,6 +5,8 @@ import { normalize } from './participantsParser';
 export interface ParticipantRecord {
   name: string;
   km: number[];
+  // pace (s/km) de cada atividade, alinhado por índice com km; ausente até o primeiro pace registrado
+  pace?: (number | null)[];
 }
 
 const MONTH_NAMES: Record<number, string> = {
@@ -59,14 +61,25 @@ export function loadMonthDataSync(
   return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
 }
 
-export function appendKm(data: ParticipantRecord[], name: string, km: number): ParticipantRecord[] {
+export function appendKm(
+  data: ParticipantRecord[],
+  name: string,
+  km: number,
+  pace: number | null = null,
+): ParticipantRecord[] {
   const normalizedName = normalize(name);
   const existing = data.find((p) => p.name === name || normalize(p.name) === normalizedName);
-  if (existing) {
-    existing.km.push(km);
-  } else {
-    data.push({ name, km: [km] });
+  if (!existing) {
+    data.push(pace === null ? { name, km: [km] } : { name, km: [km], pace: [pace] });
+    return data;
   }
+
+  if (pace !== null || existing.pace) {
+    const paces = existing.pace ?? [];
+    existing.pace = existing.km.map((_, i) => paces[i] ?? null);
+    existing.pace.push(pace);
+  }
+  existing.km.push(km);
   return data;
 }
 

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import 'dotenv/config';
-import { extractKmFromImage } from './imageAnalyzerGemini';
+import { extractActivityFromImage } from './imageAnalyzerGemini';
+import { formatPace } from './pace';
 import { loadParticipants, findParticipant } from './participantsParser';
 import { loadMonthData, appendKm, saveMonthData, getDataFilePath } from './jsonUpdater';
 import { computeHash, getCached, storeCache } from './cacheManager';
@@ -11,7 +12,12 @@ interface Results {
   file: string;
   runner: string;
   km: number;
+  pace: number | null;
   gender: string;
+}
+
+function describe(km: number, pace: number | null): string {
+  return pace === null ? `${km.toFixed(2)}km` : `${km.toFixed(2)}km (${formatPace(pace)})`;
 }
 
 async function main() {
@@ -49,21 +55,22 @@ async function main() {
       const cached = getCached(hash);
 
       let km: number;
+      let pace: number | null;
       if (cached) {
-        km = cached.km;
-        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km (cache — ignorando)`);
+        ({ km, pace = null } = cached);
+        process.stdout.write(` ${canonicalName} → ${describe(km, pace)} (cache — ignorando)`);
       } else {
-        km = await extractKmFromImage(imagePath);
-        process.stdout.write(` ${canonicalName} → ${km.toFixed(2)}km`);
-        storeCache(hash, { km, date: today, filename });
+        ({ km, pace } = await extractActivityFromImage(imagePath));
+        process.stdout.write(` ${canonicalName} → ${describe(km, pace)}`);
+        storeCache(hash, { km, pace, date: today, filename });
 
         const data = await loadMonthData(gender, month);
-        appendKm(data, canonicalName, km);
+        appendKm(data, canonicalName, km, pace);
         await saveMonthData(gender, month, data);
       }
 
       console.log(` ✓ (${getDataFilePath(gender, month)})`);
-      results.push({ file: filename, runner: canonicalName, km, gender });
+      results.push({ file: filename, runner: canonicalName, km, pace, gender });
     } catch (err) {
       console.log(` ✗`);
       console.error(`  Erro ao processar ${filename}: ${err instanceof Error ? err.message : err}`);
@@ -74,7 +81,7 @@ async function main() {
   if (results.length > 0) {
     console.log('\nResumo:');
     for (const r of results) {
-      console.log(`  ${r.file} → ${r.runner} (${r.gender}) → ${r.km.toFixed(2)}km`);
+      console.log(`  ${r.file} → ${r.runner} (${r.gender}) → ${describe(r.km, r.pace)}`);
     }
   }
 }

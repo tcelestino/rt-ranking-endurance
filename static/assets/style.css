@@ -221,6 +221,13 @@ h1 {
   font-weight: 600;
 }
 
+.pace {
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .zero {
   font-size: 0.85rem;
   color: var(--color-zero);

@@ -9,10 +9,11 @@ import { logger } from '../../processor/logger';
 import { errorHandler, HttpError } from './errorHandler';
 import { summarizeExecError } from './logSafe';
 import { createRequestLogger } from './requestLogger';
-import { extractKmFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
+import { extractActivityFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
 import { generateManifest, isManifestCurrent } from '../../processor/manifest';
+import { averagePace, isValidPace, paceTotals } from '../../processor/pace';
 import { writeRankingMarkdown } from '../../processor/markdownGenerator';
 import {
   buildRankingMarkdown,
@@ -37,6 +38,7 @@ type Gender = 'female' | 'male';
 interface SaveEntry {
   name: string;
   km: number;
+  pace?: number | null;
   hash: string;
   filename: string;
 }
@@ -80,9 +82,11 @@ async function buildState() {
   for (const gender of genders) {
     const data = await loadMonthData(gender, month);
     for (const name of participants[gender]) {
-      const km = data.find((p) => p.name === name)?.km ?? [];
+      const record = data.find((p) => p.name === name);
+      const km = record?.km ?? [];
       const total = km.reduce((sum, v) => sum + v, 0);
-      result.push({ name, gender, km, total });
+      const pace = averagePace(paceTotals(km, record?.pace));
+      result.push({ name, gender, km, total, pace });
     }
   }
 
@@ -184,18 +188,21 @@ app.post('/api/analyze', async (req, res, next) => {
     const hashPrefix = hash.slice(0, 12);
     const cachedEntry = getCached(hash);
     if (cachedEntry) {
-      req.log.info({ runner: canonicalName, hash: hashPrefix, km: cachedEntry.km }, 'imagem encontrada no cache');
-      res.json({ km: cachedEntry.km, hash, cached: true, cachedEntry });
+      req.log.info(
+        { runner: canonicalName, hash: hashPrefix, km: cachedEntry.km, pace: cachedEntry.pace ?? null },
+        'imagem encontrada no cache',
+      );
+      res.json({ km: cachedEntry.km, pace: cachedEntry.pace ?? null, hash, cached: true, cachedEntry });
       return;
     }
 
     const startedAt = Date.now();
-    const km = await extractKmFromImageBuffer(buffer, mimeType);
+    const { km, pace } = await extractActivityFromImageBuffer(buffer, mimeType);
     req.log.info(
-      { runner: canonicalName, hash: hashPrefix, km, mimeType, imageBytes: buffer.length, durationMs: Date.now() - startedAt },
-      'km extraído da imagem',
+      { runner: canonicalName, hash: hashPrefix, km, pace, mimeType, imageBytes: buffer.length, durationMs: Date.now() - startedAt },
+      'atividade extraída da imagem',
     );
-    res.json({ km, hash, cached: false });
+    res.json({ km, pace, hash, cached: false });
   } catch (err) {
     next(err);
   }
@@ -215,6 +222,10 @@ app.post('/api/save', async (req, res, next) => {
       if (typeof entry.km !== 'number' || !Number.isFinite(entry.km) || entry.km <= 0) {
         throw new HttpError(400, `Km inválido para ${canonicalName}: ${entry.km}`);
       }
+      entry.pace ??= null;
+      if (entry.pace !== null && !isValidPace(entry.pace)) {
+        throw new HttpError(400, `Pace inválido para ${canonicalName}: ${entry.pace}`);
+      }
       if (typeof entry.hash !== 'string' || !/^[a-f0-9]{64}$/.test(entry.hash)) {
         throw new HttpError(400, `Hash inválido para ${canonicalName}`);
       }
@@ -230,11 +241,11 @@ app.post('/api/save', async (req, res, next) => {
       if (byGender[gender].length === 0) continue;
       const data = await loadMonthData(gender, month);
       for (const { canonicalName, entry } of byGender[gender]) {
-        appendKm(data, canonicalName, entry.km);
+        appendKm(data, canonicalName, entry.km, entry.pace);
       }
       await saveMonthData(gender, month, data);
       for (const { entry } of byGender[gender]) {
-        storeCache(entry.hash, { km: entry.km, date: today, filename: entry.filename });
+        storeCache(entry.hash, { km: entry.km, pace: entry.pace, date: today, filename: entry.filename });
       }
     }
 
