@@ -1,6 +1,6 @@
 {
   "year": 2026,
-  "currentMonth": 10,
+  "currentMonth": 11,
   "months": [
     {
       "month": 2,
@@ -46,6 +46,11 @@
       "month": 10,
       "slug": "outubro",
       "monthName": "Outubro"
+    },
+    {
+      "month": 11,
+      "slug": "novembro",
+      "monthName": "Novembro"
     }
   ]
 }
