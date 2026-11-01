@@ -7,7 +7,7 @@ const DEFAULT_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
 
 interface WorkersAiResponse {
   success: boolean;
-  result?: { response?: string | number | null };
+  result?: { response?: string | number | object | null };
   errors?: { code: number; message: string }[];
 }
 
@@ -55,6 +55,6 @@ export async function extractActivityFromImageBuffer(buffer: Buffer, mimeType: s
     log.error({ model, status: res.status, durationMs }, 'Workers AI não retornou resposta');
     throw new Error('Workers AI não retornou resposta');
   }
-  log.debug({ model, status: res.status, durationMs, rawResponse: String(response) }, 'resposta do Workers AI');
-  return parseActivityResponse(String(response));
+  log.debug({ model, status: res.status, durationMs, rawResponse: response }, 'resposta do Workers AI');
+  return parseActivityResponse(response);
 }

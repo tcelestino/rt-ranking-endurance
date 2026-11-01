@@ -15,21 +15,31 @@ Examples: "10,5 km" and "Pace médio 5'45\\"/km" -> {"km": 10.5, "pace": "5:45"}
 
 function parseKm(value: unknown, raw: string): number {
   const km = typeof value === 'number' ? value : parseFloat(String(value ?? '').replace(',', '.'));
-  if (!Number.isFinite(km)) throw new Error(`Não foi possível extrair km: "${raw.trim()}"`);
+  if (!Number.isFinite(km)) throw new Error(`Não foi possível extrair km: "${raw}"`);
   return km;
 }
 
-export function parseActivityResponse(raw: string): ActivityResult {
+function toActivity(parsed: { km?: unknown; pace?: unknown }, raw: string): ActivityResult {
+  const pace = typeof parsed.pace === 'string' ? parsePace(parsed.pace) : null;
+  return { km: parseKm(parsed.km, raw), pace };
+}
+
+// O Workers AI devolve `response` já parseado (objeto) quando a saída é JSON válido;
+// o Gemini devolve texto. Aceita os dois formatos.
+export function parseActivityResponse(response: unknown): ActivityResult {
+  if (typeof response === 'object' && response !== null) {
+    return toActivity(response as { km?: unknown; pace?: unknown }, JSON.stringify(response));
+  }
+
+  const raw = String(response ?? '').trim();
   const json = raw.match(/\{[\s\S]*\}/);
-  if (!json) return { km: parseKm(raw.trim(), raw), pace: null };
+  if (!json) return { km: parseKm(raw, raw), pace: null };
 
   let parsed: { km?: unknown; pace?: unknown };
   try {
     parsed = JSON.parse(json[0]);
   } catch {
-    throw new Error(`Resposta inválida do modelo: "${raw.trim()}"`);
+    throw new Error(`Resposta inválida do modelo: "${raw}"`);
   }
-
-  const pace = typeof parsed.pace === 'string' ? parsePace(parsed.pace) : null;
-  return { km: parseKm(parsed.km, raw), pace };
+  return toActivity(parsed, raw);
 }
