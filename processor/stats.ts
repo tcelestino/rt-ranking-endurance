@@ -276,6 +276,6 @@ export function buildStats(year: number): Stats {
     distances: buildDistances(months),
     longestRun: findLongestRun(months, runners),
     bestPace: findBestPace(months, runners),
-    pace: buildPaceStats(buildPaceRows(months, runners), DISTANCE_BUCKETS),
+    pace: buildPaceStats(buildPaceRows(months, runners)),
   };
 }

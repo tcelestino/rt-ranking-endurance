@@ -11,11 +11,6 @@ export interface PaceRow {
   pace: number;
 }
 
-export interface DistanceBucket {
-  label: string;
-  max: number;
-}
-
 export interface RunnerPace {
   name: string;
   gender: Gender;
@@ -36,7 +31,8 @@ export interface PaceStats {
   runners: RunnerPace[];
   fastestRuns: PaceRow[];
   byMonth: ({ month: number } & GenderPace)[];
-  byDistance: ({ label: string } & GenderPace)[];
+  // todas as atividades com pace, para o gráfico de dispersão
+  runs: PaceRow[];
   groupPace: number | null;
 }
 
@@ -87,16 +83,14 @@ function buildRunners(rows: PaceRow[]): RunnerPace[] {
     .sort((a, b) => a.avgPace - b.avgPace || a.name.localeCompare(b.name));
 }
 
-export function buildPaceStats(rows: PaceRow[], buckets: DistanceBucket[]): PaceStats {
+export function buildPaceStats(rows: PaceRow[]): PaceStats {
   const months = [...groupBy(rows, (r) => r.month).entries()].sort(([a], [b]) => Number(a) - Number(b));
-  const bucketOf = (km: number) => buckets.findIndex((b) => km < b.max);
-  const perBucket = groupBy(rows, (r) => bucketOf(r.km));
 
   return {
     runners: buildRunners(rows),
     fastestRuns: [...rows].sort(byPaceThenName).slice(0, FASTEST_RUNS_LIMIT),
     byMonth: months.map(([month, own]) => ({ month: Number(month), ...genderPace(own) })),
-    byDistance: buckets.map((bucket, i) => ({ label: bucket.label, ...genderPace(perBucket.get(i) ?? []) })),
+    runs: rows,
     groupPace: weightedPace(rows),
   };
 }
