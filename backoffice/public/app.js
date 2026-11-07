@@ -646,7 +646,7 @@ function barChart(
   id,
   labels,
   datasets,
-  { horizontal = false, stacked = false, format = formatKm, integer = false, tickFormat = null } = {},
+  { horizontal = false, stacked = false, format = formatKm, integer = false, tickFormat = null, extra = null } = {},
 ) {
   const ticks = { ...(integer ? { precision: 0 } : {}), ...(tickFormat ? { callback: tickFormat } : {}) };
   const valueAxis = { beginAtZero: true, stacked, ticks };
@@ -667,7 +667,10 @@ function barChart(
           tooltip: {
             filter: (item) => item.raw !== null,
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${format(horizontal ? ctx.parsed.x : ctx.parsed.y)}`,
+              label: (ctx) => {
+                const text = `${ctx.dataset.label}: ${format(horizontal ? ctx.parsed.x : ctx.parsed.y)}`;
+                return extra ? `${text} · ${extra(ctx.dataIndex)}` : text;
+              },
             },
           },
         },
@@ -718,6 +721,72 @@ function participationChart(runners, theme) {
                 return `${ctx.label}: ${plural(ctx.parsed, 'atividade', 'atividades')} (${pct}%)`;
               },
             },
+          },
+        },
+      },
+    }),
+  );
+}
+
+const paceTick = (value) => paceToInput(Math.round(value));
+const PACE_OPTIONS = { format: formatPace, tickFormat: paceTick };
+
+function renderPaceCharts(data, theme) {
+  const monthName = (month) => data.months.find((m) => m.month === month)?.monthName ?? String(month);
+  const { runners, fastestRuns, byMonth, byDistance } = data.pace;
+
+  for (const gender of ['female', 'male']) {
+    const ranked = runners.filter((r) => r.gender === gender).sort((a, b) => a.bestPace - b.bestPace);
+    barChart(
+      `chart-best-pace-${gender}`,
+      ranked.map((r) => r.name),
+      [{ label: GENDER_LABEL[gender], backgroundColor: theme.gender[gender], data: ranked.map((r) => r.bestPace) }],
+      { horizontal: true, ...PACE_OPTIONS, extra: (i) => formatKm(ranked[i].bestPaceKm) },
+    );
+  }
+
+  barChart(
+    'chart-fastest-runs',
+    fastestRuns.map((r) => `${r.name} · ${monthName(r.month)}`),
+    genderDatasets(fastestRuns, 'pace', theme),
+    { horizontal: true, stacked: true, ...PACE_OPTIONS, extra: (i) => formatKm(fastestRuns[i].km) },
+  );
+
+  barChart(
+    'chart-pace-distance',
+    byDistance.map((d) => d.label),
+    ['female', 'male'].map((gender) => ({
+      label: GENDER_LABEL[gender],
+      backgroundColor: theme.gender[gender],
+      data: byDistance.map((d) => d[gender]),
+    })),
+    PACE_OPTIONS,
+  );
+
+  charts.push(
+    new window.Chart($('chart-pace-months'), {
+      type: 'line',
+      data: {
+        labels: byMonth.map((m) => monthName(m.month)),
+        datasets: ['female', 'male'].map((gender) => ({
+          label: GENDER_LABEL[gender],
+          data: byMonth.map((m) => m[gender]),
+          borderColor: theme.gender[gender],
+          backgroundColor: theme.gender[gender],
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: false,
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: { x: { grid: { display: false } }, y: { reverse: true, ticks: { callback: paceTick } } },
+        plugins: {
+          tooltip: {
+            filter: (item) => item.raw !== null,
+            callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatPace(ctx.parsed.y)}` },
           },
         },
       },
@@ -782,8 +851,10 @@ function renderStatsCharts(data) {
     'chart-pace',
     paced.map((r) => r.name),
     genderDatasets(paced, 'pace', theme),
-    { horizontal: true, stacked: true, format: formatPace, tickFormat: (value) => paceToInput(Math.round(value)) },
+    { horizontal: true, stacked: true, ...PACE_OPTIONS },
   );
+
+  renderPaceCharts(data, theme);
 
   barChart(
     'chart-active-runners',
@@ -855,6 +926,9 @@ function renderStatsKpis(data) {
     bestPace ? formatPace(bestPace.pace) : '—',
     bestPace ? `${bestPace.name} · ${formatKm(bestPace.km)} · ${bestPace.monthName}` : '',
   );
+
+  const { groupPace } = data.pace;
+  setKpi('kpi-group-pace', groupPace === null ? '—' : formatPace(groupPace));
 
   const consolidated = data.months.filter((m) => m.activities === null).map((m) => m.monthName);
   $('stats-note').hidden = consolidated.length === 0;
