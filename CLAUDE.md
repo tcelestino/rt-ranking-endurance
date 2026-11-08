@@ -15,6 +15,7 @@ npm run build        # compila TypeScript (processor/) para dist/
 npm run api:dev      # inicia a API em modo dev na porta 3001
 npm run api:build    # compila a API para api/dist/
 npm run backoffice   # sobe o backoffice local em localhost:3002 (Workers AI)
+npm run backoffice:dev # backoffice com auto reload ao editar .ts (desenvolvimento)
 npm run backoffice:check # verifica tipos do backoffice
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
@@ -89,6 +90,8 @@ O projeto tem quatro partes independentes:
 - `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
 
 ### Backoffice — `npm run backoffice`
+
+Para desenvolver use `npm run backoffice:dev` (`tsx watch`): reinicia ao mudar `.ts` importados (`backoffice/src`, `processor/`). Alterações em `data/` e `backoffice/public/` não reiniciam (no `public/` basta recarregar o navegador). Não edite `.ts` durante uma publicação (o reinício mata o `deploy.sh`); para publicar use `npm run backoffice`.
 
 **`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual

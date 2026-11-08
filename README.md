@@ -137,6 +137,7 @@ Depois:
 
 ```bash
 npm run backoffice   # abre em http://localhost:3002
+npm run backoffice:dev # idem, com auto reload ao editar o código
 ```
 
 1. Marque os participantes que serão atualizados.
