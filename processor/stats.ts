@@ -1,10 +1,9 @@
 import { loadParticipants, normalize } from './participantsParser';
 import { getMonthName, loadMonthDataSync } from './jsonUpdater';
 import { averagePace } from './pace';
+import { buildPaceStats, type Gender, type PaceRow, type PaceStats } from './paceStats';
 import { calcMonthlyRanking, listRankingPeriods, MONTH_DISPLAY } from './ranking';
 import { capitalizeFirstLetter, getCurrentMonth } from './utils';
-
-type Gender = 'female' | 'male';
 
 const GENDERS: Gender[] = ['female', 'male'];
 const TOP_CUMULATIVE = 5;
@@ -83,6 +82,7 @@ export interface Stats {
   distances: { label: string; count: number }[];
   longestRun: { name: string; km: number; month: number; monthName: string } | null;
   bestPace: { name: string; pace: number; km: number; month: number; monthName: string } | null;
+  pace: PaceStats;
 }
 
 const sum = (values: number[]) => values.reduce((acc, v) => acc + v, 0);
@@ -237,6 +237,20 @@ function findBestPace(months: MonthData[], runners: Runner[]): Stats['bestPace']
   return best;
 }
 
+function buildPaceRows(months: MonthData[], runners: Runner[]): PaceRow[] {
+  return months.flatMap((data) =>
+    runners.flatMap((runner) =>
+      runnerPaced(data, runner).map(({ km, pace }) => ({
+        name: runner.name,
+        gender: runner.gender,
+        month: data.month,
+        km,
+        pace,
+      })),
+    ),
+  );
+}
+
 function calcYearTotal(year: number, months: number[], runners: Runner[]): number {
   return sum(months.map((month) => sum([...loadMonth(month, year, runners).activities.values()].map(sum))));
 }
@@ -262,5 +276,6 @@ export function buildStats(year: number): Stats {
     distances: buildDistances(months),
     longestRun: findLongestRun(months, runners),
     bestPace: findBestPace(months, runners),
+    pace: buildPaceStats(buildPaceRows(months, runners)),
   };
 }

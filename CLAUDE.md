@@ -51,6 +51,7 @@ rt-ranking-endurance/
 │   ├── manifest.ts
 │   ├── ranking.ts
 │   ├── stats.ts
+│   ├── paceStats.ts
 │   ├── clearCache.ts
 │   └── clearImages.ts
 ├── data/                       # JSONs commitados — lidos por api/ e escritos por processor/
@@ -92,7 +93,7 @@ O projeto tem quatro partes independentes:
 **`backoffice/src/server.ts`** — Express local (`127.0.0.1:3002`) sem `package.json` próprio; roda via `tsx` com `node_modules` e `.env` da raiz e importa funções de `processor/`. Endpoints:
 - `GET /api/state` → participantes de `runners.json` com km/total do mês atual
 - `GET /api/ranking?year=&month=` → `{ year, month, monthName, current, periods, female, male, annual, totals, markdown }` via `processor/ranking.ts`. Sem parâmetros usa o mês vigente (ou o período mais recente com dados); `periods` lista anos/meses existentes em `data/`; `markdown` é o texto do WhatsApp do período (`buildRankingMarkdown`); 404 para período sem dados
-- `GET /api/stats?year=` → agregados do ano para a aba "Gráficos" via `processor/stats.ts` (`buildStats`): km por mês (F/M), km por ano, atividades/meses ativos/vitórias por corredor, campeões dos meses fechados, top 5 acumulado, distribuição de distâncias, maior corrida, melhor pace (`bestPace`) e pace médio por corredor. Sem `year` usa o ano mais recente; 404 para ano sem dados. Meses em que cada corredor tem um único valor (só o total mensal, ex.: fev–mar/2026) não entram nas métricas por atividade. O frontend carrega o Chart.js do jsDelivr sob demanda
+- `GET /api/stats?year=` → agregados do ano para a aba "Gráficos" via `processor/stats.ts` (`buildStats`): km por mês (F/M), km por ano, atividades/meses ativos/vitórias por corredor, campeões dos meses fechados, top 5 acumulado, distribuição de distâncias, maior corrida, melhor pace (`bestPace`) e pace médio por corredor. O campo `pace` (`runners`, `runs`, `fastestRuns`, `byMonth`, `groupPace`) alimenta os gráficos de pace: melhor pace por gênero, pace por mês, corridas mais rápidas, bolhas (ritmo x volume por corredor) e dispersão (distância x pace por corrida). Sem `year` usa o ano mais recente; 404 para ano sem dados. Meses em que cada corredor tem um único valor (só o total mensal, ex.: fev–mar/2026) não entram nas métricas por atividade. O frontend carrega o Chart.js do jsDelivr sob demanda
 - `POST /api/analyze` `{ name, mimeType, data(base64) }` → `{ km, pace, hash, cached }` (não grava nada; `pace` em s/km ou `null`)
 - `POST /api/save` `{ entries: [{ name, km, pace, hash, filename }] }` → `appendKm` + `saveMonthData` + `storeCache`; rejeita hash repetido/em cache e pace fora de 120–1200 s/km
 - `POST /api/runners` `{ name, gender }` → adiciona em `runners.json` (409 se o nome já existir em qualquer gênero)
@@ -124,6 +125,8 @@ Scripts do `processor/` reaproveitados pelo backoffice exportam a função princ
 **`processor/ranking.ts`** — cálculo dos rankings mensal/anual (por ano), `listRankingPeriods` e montagem do texto do ranking (`buildRankingMarkdown`); usado por `markdownGenerator.ts` e pelo backoffice.
 
 **`processor/stats.ts`** — estatísticas anuais para os gráficos do backoffice (`buildStats`); reaproveita `calcMonthlyRanking` e `listRankingPeriods` de `ranking.ts`.
+
+**`processor/paceStats.ts`** — agregações puras de pace (`buildPaceStats`) sobre uma linha por atividade com pace: ranking por corredor (médio e melhor), corridas mais rápidas, pace por mês (F/M), todas as atividades com pace (`runs`) e pace do grupo. Sem I/O; coberto por `tests/paceStats.test.ts`.
 
 **`processor/kmPrompt.ts`** — prompt (`ACTIVITY_PROMPT`, resposta em JSON `{ km, pace }`) e `parseActivityResponse` compartilhados entre Gemini e Cloudflare.
 

@@ -646,7 +646,7 @@ function barChart(
   id,
   labels,
   datasets,
-  { horizontal = false, stacked = false, format = formatKm, integer = false, tickFormat = null } = {},
+  { horizontal = false, stacked = false, format = formatKm, integer = false, tickFormat = null, extra = null } = {},
 ) {
   const ticks = { ...(integer ? { precision: 0 } : {}), ...(tickFormat ? { callback: tickFormat } : {}) };
   const valueAxis = { beginAtZero: true, stacked, ticks };
@@ -667,7 +667,10 @@ function barChart(
           tooltip: {
             filter: (item) => item.raw !== null,
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${format(horizontal ? ctx.parsed.x : ctx.parsed.y)}`,
+              label: (ctx) => {
+                const text = `${ctx.dataset.label}: ${format(horizontal ? ctx.parsed.x : ctx.parsed.y)}`;
+                return extra ? `${text} · ${extra(ctx.dataIndex)}` : text;
+              },
             },
           },
         },
@@ -718,6 +721,149 @@ function participationChart(runners, theme) {
                 return `${ctx.label}: ${plural(ctx.parsed, 'atividade', 'atividades')} (${pct}%)`;
               },
             },
+          },
+        },
+      },
+    }),
+  );
+}
+
+const paceTick = (value) => paceToInput(Math.round(value));
+const PACE_OPTIONS = { format: formatPace, tickFormat: paceTick };
+
+const BUBBLE_MIN_RADIUS = 6;
+const BUBBLE_STEP = 2;
+const BUBBLE_MAX_RADIUS = 22;
+
+function paceScales(xTitle) {
+  return {
+    x: { beginAtZero: true, title: { display: true, text: xTitle }, grid: { display: false } },
+    y: { reverse: true, ticks: { callback: paceTick }, title: { display: true, text: 'Pace (mais rápido no topo)' } },
+  };
+}
+
+// cada bolha é um corredor: x = km com pace, y = pace médio, tamanho = atividades
+function paceBubbleChart(runners, theme) {
+  charts.push(
+    new window.Chart($('chart-pace-bubbles'), {
+      type: 'bubble',
+      data: {
+        datasets: ['female', 'male'].map((gender) => ({
+          label: GENDER_LABEL[gender],
+          backgroundColor: `${theme.gender[gender]}b3`,
+          borderColor: theme.gender[gender],
+          data: runners
+            .filter((r) => r.gender === gender)
+            .map((r) => ({
+              x: r.km,
+              y: r.avgPace,
+              r: Math.min(BUBBLE_MAX_RADIUS, BUBBLE_MIN_RADIUS + r.activities * BUBBLE_STEP),
+              name: r.name,
+              activities: r.activities,
+            })),
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: paceScales('Km com pace registrado'),
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const { name, activities, x, y } = ctx.raw;
+                return `${name}: ${formatPace(y)} · ${formatKm(x)} · ${plural(activities, 'atividade', 'atividades')}`;
+              },
+            },
+          },
+        },
+      },
+    }),
+  );
+}
+
+// cada ponto é uma corrida: x = distância, y = pace
+function paceScatterChart(runs, monthName, theme) {
+  charts.push(
+    new window.Chart($('chart-pace-scatter'), {
+      type: 'scatter',
+      data: {
+        datasets: ['female', 'male'].map((gender) => ({
+          label: GENDER_LABEL[gender],
+          backgroundColor: `${theme.gender[gender]}b3`,
+          borderColor: theme.gender[gender],
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          data: runs
+            .filter((r) => r.gender === gender)
+            .map((r) => ({ x: r.km, y: r.pace, name: r.name, month: r.month })),
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: paceScales('Distância (km)'),
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const { name, month, x, y } = ctx.raw;
+                return `${name} · ${monthName(month)}: ${formatPace(y)} em ${formatKm(x)}`;
+              },
+            },
+          },
+        },
+      },
+    }),
+  );
+}
+
+function renderPaceCharts(data, theme) {
+  const monthName = (month) => data.months.find((m) => m.month === month)?.monthName ?? String(month);
+  const { runners, fastestRuns, byMonth } = data.pace;
+
+  for (const gender of ['female', 'male']) {
+    const ranked = runners.filter((r) => r.gender === gender).sort((a, b) => a.bestPace - b.bestPace);
+    barChart(
+      `chart-best-pace-${gender}`,
+      ranked.map((r) => r.name),
+      [{ label: GENDER_LABEL[gender], backgroundColor: theme.gender[gender], data: ranked.map((r) => r.bestPace) }],
+      { horizontal: true, ...PACE_OPTIONS, extra: (i) => formatKm(ranked[i].bestPaceKm) },
+    );
+  }
+
+  barChart(
+    'chart-fastest-runs',
+    fastestRuns.map((r) => `${r.name} · ${monthName(r.month)}`),
+    genderDatasets(fastestRuns, 'pace', theme),
+    { horizontal: true, stacked: true, ...PACE_OPTIONS, extra: (i) => formatKm(fastestRuns[i].km) },
+  );
+
+  paceBubbleChart(runners, theme);
+  paceScatterChart(data.pace.runs, monthName, theme);
+
+  charts.push(
+    new window.Chart($('chart-pace-months'), {
+      type: 'line',
+      data: {
+        labels: byMonth.map((m) => monthName(m.month)),
+        datasets: ['female', 'male'].map((gender) => ({
+          label: GENDER_LABEL[gender],
+          data: byMonth.map((m) => m[gender]),
+          borderColor: theme.gender[gender],
+          backgroundColor: theme.gender[gender],
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: false,
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: { x: { grid: { display: false } }, y: { reverse: true, ticks: { callback: paceTick } } },
+        plugins: {
+          tooltip: {
+            filter: (item) => item.raw !== null,
+            callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatPace(ctx.parsed.y)}` },
           },
         },
       },
@@ -782,8 +928,10 @@ function renderStatsCharts(data) {
     'chart-pace',
     paced.map((r) => r.name),
     genderDatasets(paced, 'pace', theme),
-    { horizontal: true, stacked: true, format: formatPace, tickFormat: (value) => paceToInput(Math.round(value)) },
+    { horizontal: true, stacked: true, ...PACE_OPTIONS },
   );
+
+  renderPaceCharts(data, theme);
 
   barChart(
     'chart-active-runners',
@@ -855,6 +1003,9 @@ function renderStatsKpis(data) {
     bestPace ? formatPace(bestPace.pace) : '—',
     bestPace ? `${bestPace.name} · ${formatKm(bestPace.km)} · ${bestPace.monthName}` : '',
   );
+
+  const { groupPace } = data.pace;
+  setKpi('kpi-group-pace', groupPace === null ? '—' : formatPace(groupPace));
 
   const consolidated = data.months.filter((m) => m.activities === null).map((m) => m.monthName);
   $('stats-note').hidden = consolidated.length === 0;
