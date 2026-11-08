@@ -13,6 +13,7 @@
     "api:dev": "cd api && npm run dev",
     "api:build": "cd api && npm run build",
     "backoffice": "tsx backoffice/src/server.ts",
+    "backoffice:dev": "tsx watch backoffice/src/server.ts",
     "backoffice:check": "tsc -p backoffice --noEmit",
     "serve": "npx serve static",
     "copy:ranking": "bash scripts/copy-ranking.sh",
