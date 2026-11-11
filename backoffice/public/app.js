@@ -192,6 +192,7 @@ function renderImage(name, item) {
   paceInput.value = item.paceText;
   paceInput.disabled = item.status !== 'done';
   paceInput.addEventListener('input', () => {
+    paceInput.value = maskPace(paceInput.value);
     item.paceText = paceInput.value;
   });
 

@@ -334,7 +334,7 @@
             <span>km</span>
           </label>
           <label class="image-pace">
-            <input type="text" inputmode="numeric" placeholder="m:ss" aria-label="Pace médio (min/km)" />
+            <input type="text" inputmode="numeric" maxlength="5" placeholder="m:ss" aria-label="Pace médio (min/km)" />
             <span>min/km</span>
           </label>
           <span class="image-status"></span>
@@ -344,6 +344,7 @@
     </template>
 
     <script src="scroll.js"></script>
+    <script src="paceMask.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

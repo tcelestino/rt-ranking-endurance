@@ -37,7 +37,7 @@ rt-ranking-endurance/
 │       └── style.css
 ├── backoffice/                 # Interface local (não deployado)
 │   ├── src/server.ts
-│   ├── public/                 # index.html, app.js, scroll.js, style.css
+│   ├── public/                 # index.html, app.js, scroll.js, paceMask.js, style.css
 │   └── tsconfig.json           # noEmit, inclui ../processor
 ├── processor/                  # CLI local (não deployado)
 │   ├── index.ts
@@ -114,6 +114,8 @@ Para desenvolver use `npm run backoffice:dev` (`tsx watch`): reinicia ao mudar `
 - Configuração no dashboard do Clerk: login só com Google; Restrictions > Allowlist com os emails permitidos; Sessions > Customize session token com `{ "metadata": "{{user.public_metadata}}" }`; após o primeiro login, definir `publicMetadata` = `{ "role": "admin" }` no usuário.
 
 **Scroll** — `backoffice/public/scroll.js` (`createScrollController`): ao marcar um participante rola suavemente até o card novo (só se não estiver visível) e, após salvar, sobe ao topo para o botão "Publicar". Com a aba oculta (Page Visibility API) a rolagem fica pendente até a aba voltar a ficar visível; respeita `prefers-reduced-motion`.
+
+**Máscara de pace** — `backoffice/public/paceMask.js` (`maskPace`): no campo de pace do card de imagem, digitar `545` vira `5:45` (só dígitos, máx. 4, ":" antes dos 2 últimos a partir de 3 dígitos). Não valida segundos; a validação (2:00 a 20:00) continua em `parsePaceInput`. Coberto por `tests/paceMask.test.ts`.
 
 **Logs (Pino)** — `processor/logger.ts` (`createLogger`, `logger`) e `backoffice/src/requestLogger.ts` (`pino-http`). JSON no stdout; pretty-print só em TTY fora de produção.
 - Variáveis: `LOG_LEVEL` (padrão `info` no backoffice, `silent` nos CLIs de `processor/`), `LOG_PRETTY=false` para forçar JSON, `OTEL_SERVICE_NAME` (padrão `rt-ranking-backoffice`).
