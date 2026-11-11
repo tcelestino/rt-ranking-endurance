@@ -23,3 +23,20 @@ for (const [name, input, expected] of cases) {
     assert.equal(maskPace(input), expected);
   });
 }
+
+const { maskPaceWithCaret } = require('../backoffice/public/paceMask.js');
+
+const caretCases: [string, string, number, string, number][] = [
+  ['digitando no fim mantém cursor no fim', '545', 3, '5:45', 4],
+  ['backspace no meio não joga o cursor para o fim', '545', 1, '5:45', 1],
+  ['inserção no início de 2 dígitos', '154', 1, '1:54', 1],
+  ['segundos reposicionam o ":"', '10:0', 4, '1:00', 4],
+  ['sem mudança preserva cursor', '5:45', 2, '5:45', 2],
+  ['vazio', '', 0, '', 0],
+];
+
+for (const [name, raw, caret, value, pos] of caretCases) {
+  test(`maskPaceWithCaret: ${name}`, () => {
+    assert.deepEqual(maskPaceWithCaret(raw, caret), { value, caret: pos });
+  });
+}

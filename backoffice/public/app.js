@@ -192,7 +192,12 @@ function renderImage(name, item) {
   paceInput.value = item.paceText;
   paceInput.disabled = item.status !== 'done';
   paceInput.addEventListener('input', () => {
-    paceInput.value = maskPace(paceInput.value);
+    const raw = paceInput.value;
+    const masked = maskPaceWithCaret(raw, paceInput.selectionStart ?? raw.length);
+    if (masked.value !== raw) {
+      paceInput.value = masked.value;
+      paceInput.setSelectionRange(masked.caret, masked.caret);
+    }
     item.paceText = paceInput.value;
   });
 
