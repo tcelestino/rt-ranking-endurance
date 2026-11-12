@@ -6,7 +6,7 @@ import { calcMonthlyRanking, listRankingPeriods, MONTH_DISPLAY } from './ranking
 import { capitalizeFirstLetter, getCurrentMonth } from './utils';
 
 const GENDERS: Gender[] = ['female', 'male'];
-const TOP_CUMULATIVE = 5;
+const TOP_CUMULATIVE = 10;
 const DISTANCE_BUCKETS = [
   { label: 'até 5 km', max: 5 },
   { label: '5–10 km', max: 10 },
@@ -78,7 +78,7 @@ export interface Stats {
   months: MonthStats[];
   runners: RunnerStats[];
   winners: MonthWinners[];
-  cumulativeTop5: { name: string; gender: Gender; values: number[] }[];
+  cumulativeTop: { name: string; gender: Gender; values: number[] }[];
   distances: { label: string; count: number }[];
   longestRun: { name: string; km: number; month: number; monthName: string } | null;
   bestPace: { name: string; pace: number; km: number; month: number; monthName: string } | null;
@@ -272,7 +272,7 @@ export function buildStats(year: number): Stats {
     months: months.map((data) => buildMonthStats(data, year, runners)),
     runners: ranked,
     winners,
-    cumulativeTop5: buildCumulativeTop(months, runners, ranked),
+    cumulativeTop: buildCumulativeTop(months, runners, ranked),
     distances: buildDistances(months),
     longestRun: findLongestRun(months, runners),
     bestPace: findBestPace(months, runners),

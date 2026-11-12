@@ -638,7 +638,7 @@ function chartTheme() {
     grid: cssVar('--color-border'),
     accent: cssVar('--color-accent'),
     gender: { female: cssVar('--chart-female'), male: cssVar('--chart-male') },
-    series: [1, 2, 3, 4, 5].map((i) => cssVar(`--chart-${i}`)),
+    series: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => cssVar(`--chart-${i}`)),
   };
 }
 
@@ -958,7 +958,7 @@ function renderStatsCharts(data) {
       type: 'line',
       data: {
         labels: monthLabels,
-        datasets: data.cumulativeTop5.map((runner, i) => ({
+        datasets: data.cumulativeTop.map((runner, i) => ({
           label: runner.name,
           data: runner.values,
           borderColor: theme.series[i],
