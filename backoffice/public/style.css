@@ -21,6 +21,11 @@
   --chart-3: #1baf7a;
   --chart-4: #eda100;
   --chart-5: #e87ba4;
+  --chart-6: #7c5cd6;
+  --chart-7: #17a2b8;
+  --chart-8: #8a6d3b;
+  --chart-9: #6b7a8f;
+  --chart-10: #c2410c;
   color-scheme: light;
 }
 
@@ -48,6 +53,11 @@
     --chart-3: #199e70;
     --chart-4: #c98500;
     --chart-5: #d55181;
+    --chart-6: #9378e6;
+    --chart-7: #2bb5cb;
+    --chart-8: #b08d57;
+    --chart-9: #8696ab;
+    --chart-10: #e0662f;
     color-scheme: dark;
   }
 }

@@ -6,7 +6,7 @@ import { calcMonthlyRanking, listRankingPeriods, MONTH_DISPLAY } from './ranking
 import { capitalizeFirstLetter, getCurrentMonth } from './utils';
 
 const GENDERS: Gender[] = ['female', 'male'];
-const TOP_CUMULATIVE = 5;
+const TOP_CUMULATIVE = 10;
 const DISTANCE_BUCKETS = [
   { label: 'até 5 km', max: 5 },
   { label: '5–10 km', max: 10 },
@@ -15,7 +15,7 @@ const DISTANCE_BUCKETS = [
   { label: '21 km ou mais', max: Infinity },
 ];
 
-interface Runner {
+export interface Runner {
   key: string;
   name: string;
   gender: Gender;
@@ -29,7 +29,7 @@ interface PacedActivity {
   pace: number;
 }
 
-interface MonthData {
+export interface MonthData {
   month: number;
   activities: MonthActivities;
   // só as atividades com pace registrado
@@ -47,6 +47,8 @@ export interface MonthStats {
   total: number;
   activeRunners: number;
   activities: number | null;
+  femaleActivities: number | null;
+  maleActivities: number | null;
 }
 
 export interface RunnerStats {
@@ -78,7 +80,7 @@ export interface Stats {
   months: MonthStats[];
   runners: RunnerStats[];
   winners: MonthWinners[];
-  cumulativeTop5: { name: string; gender: Gender; values: number[] }[];
+  cumulativeTop: { name: string; gender: Gender; values: number[] }[];
   distances: { label: string; count: number }[];
   longestRun: { name: string; km: number; month: number; monthName: string } | null;
   bestPace: { name: string; pace: number; km: number; month: number; monthName: string } | null;
@@ -132,12 +134,14 @@ function paceOf(activities: PacedActivity[]): number | null {
   return averagePace({ km: sum(activities.map((a) => a.km)), seconds: sum(activities.map((a) => a.km * a.pace)) });
 }
 
-function buildMonthStats(data: MonthData, year: number, runners: Runner[]): MonthStats {
+export function buildMonthStats(data: MonthData, year: number, runners: Runner[]): MonthStats {
   const genderTotal = (gender: Gender) =>
     sum(runners.filter((r) => r.gender === gender).map((r) => sum(runnerKm(data, r))));
   const female = genderTotal('female');
   const male = genderTotal('male');
   const perRunner = runners.map((r) => runnerKm(data, r));
+  const genderActivities = (gender: Gender) =>
+    data.detailed ? sum(runners.filter((r) => r.gender === gender).map((r) => runnerKm(data, r).length)) : null;
 
   return {
     month: data.month,
@@ -148,6 +152,8 @@ function buildMonthStats(data: MonthData, year: number, runners: Runner[]): Mont
     total: female + male,
     activeRunners: perRunner.filter((kms) => kms.length > 0).length,
     activities: data.detailed ? sum(perRunner.map((kms) => kms.length)) : null,
+    femaleActivities: genderActivities('female'),
+    maleActivities: genderActivities('male'),
   };
 }
 
@@ -272,7 +278,7 @@ export function buildStats(year: number): Stats {
     months: months.map((data) => buildMonthStats(data, year, runners)),
     runners: ranked,
     winners,
-    cumulativeTop5: buildCumulativeTop(months, runners, ranked),
+    cumulativeTop: buildCumulativeTop(months, runners, ranked),
     distances: buildDistances(months),
     longestRun: findLongestRun(months, runners),
     bestPace: findBestPace(months, runners),
