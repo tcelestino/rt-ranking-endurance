@@ -897,6 +897,24 @@ function renderStatsCharts(data) {
     })),
   );
 
+  barChart(
+    'chart-activities-month',
+    monthLabels,
+    [
+      { label: GENDER_LABEL.female, key: 'femaleActivities' },
+      { label: GENDER_LABEL.male, key: 'maleActivities' },
+    ].map(({ label, key }, i) => ({
+      label,
+      backgroundColor: theme.gender[i === 0 ? 'female' : 'male'],
+      data: data.months.map((m) => m[key]),
+    })),
+    {
+      format: formatCount('corrida', 'corridas'),
+      integer: true,
+      extra: (i) => `total: ${data.months[i].activities}`,
+    },
+  );
+
   const bestMonths = [...data.months].sort((a, b) => b.total - a.total);
   barChart(
     'chart-best-months',
