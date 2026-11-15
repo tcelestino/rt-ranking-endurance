@@ -182,10 +182,16 @@ function renderImage(name, item) {
   li.querySelector('.image-name').textContent = item.filename;
 
   const kmInput = li.querySelector('.image-km input');
-  kmInput.value = item.km ?? '';
+  kmInput.value = kmToInput(item.km);
   kmInput.disabled = item.status !== 'done';
   kmInput.addEventListener('input', () => {
-    item.km = kmInput.value === '' ? null : Number(kmInput.value);
+    const raw = kmInput.value;
+    const masked = maskKmWithCaret(raw, kmInput.selectionStart ?? raw.length);
+    if (masked.value !== raw) {
+      kmInput.value = masked.value;
+      kmInput.setSelectionRange(masked.caret, masked.caret);
+    }
+    item.km = parseKmInput(kmInput.value);
   });
 
   const paceInput = li.querySelector('.image-pace input');
