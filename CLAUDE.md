@@ -37,7 +37,7 @@ rt-ranking-endurance/
 │       └── style.css
 ├── backoffice/                 # Interface local (não deployado)
 │   ├── src/server.ts
-│   ├── public/                 # index.html, app.js, scroll.js, paceMask.js, style.css
+│   ├── public/                 # index.html, app.js, scroll.js, kmMask.js, paceMask.js, style.css
 │   └── tsconfig.json           # noEmit, inclui ../processor
 ├── processor/                  # CLI local (não deployado)
 │   ├── index.ts
@@ -114,6 +114,8 @@ Para desenvolver use `npm run backoffice:dev` (`tsx watch`): reinicia ao mudar `
 - Configuração no dashboard do Clerk: login só com Google; Restrictions > Allowlist com os emails permitidos; Sessions > Customize session token com `{ "metadata": "{{user.public_metadata}}" }`; após o primeiro login, definir `publicMetadata` = `{ "role": "admin" }` no usuário.
 
 **Scroll** — `backoffice/public/scroll.js` (`createScrollController`): ao marcar um participante rola suavemente até o card novo (só se não estiver visível) e, após salvar, sobe ao topo para o botão "Publicar". Com a aba oculta (Page Visibility API) a rolagem fica pendente até a aba voltar a ficar visível; respeita `prefers-reduced-motion`.
+
+**Máscara de km** — `backoffice/public/kmMask.js` (`maskKm`): no campo de km do card de imagem, digitar `525` vira `5.25` (só dígitos, máx. 5, "." antes dos 2 últimos a partir de 3 dígitos). `kmToInput` formata o km extraído (`10.5` -> `10.50`) e `parseKmInput` converte de volta para número. Coberto por `tests/kmMask.test.ts`.
 
 **Máscara de pace** — `backoffice/public/paceMask.js` (`maskPace`): no campo de pace do card de imagem, digitar `545` vira `5:45` (só dígitos, máx. 4, ":" antes dos 2 últimos a partir de 3 dígitos). Não valida segundos; a validação (2:00 a 20:00) continua em `parsePaceInput`. Coberto por `tests/paceMask.test.ts`.
 
