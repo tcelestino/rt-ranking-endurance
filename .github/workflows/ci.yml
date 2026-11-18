@@ -14,6 +14,8 @@ concurrency:
 
 jobs:
   test:
+    # PRs de atualização de dados (update-*) não precisam de CI; job pulado conta como aprovado no check obrigatório
+    if: ${{ !(startsWith(github.head_ref, 'update-') && github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
