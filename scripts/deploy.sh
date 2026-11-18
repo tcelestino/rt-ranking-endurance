@@ -86,6 +86,24 @@ if [ "$AUTO_MERGE" = false ]; then
   exit 0
 fi
 
+wait_for_checks() {
+  local attempt
+  # o GitHub leva alguns segundos para registrar os checks após o push
+  for attempt in 1 2 3 4 5 6; do
+    if ! gh pr checks "$PR_URL" --required 2>&1 | grep -qi 'no required checks'; then
+      break
+    fi
+    sleep 5
+  done
+  echo "Aguardando checks obrigatórios do PR..."
+  gh pr checks "$PR_URL" --required --watch --fail-fast
+}
+
+if ! wait_for_checks; then
+  echo "Aviso: checks obrigatórios falharam ou não concluíram. PR mantido aberto: $PR_URL" >&2
+  exit 1
+fi
+
 if gh pr merge "$PR_URL" \
   --squash \
   --subject "$PR_TITLE" \
