@@ -136,3 +136,24 @@ describe("GitHubRepo requisições", () => {
     assert.equal(call.body.merge_method, "squash");
   });
 });
+
+describe("GitHubRepo falhas de rede e entrada", () => {
+  it("fetch rejeitado vira GitHubError 502 sem vazar o token", async () => {
+    const fake = (async () => {
+      throw new TypeError(`falha com Bearer ${TOKEN}`);
+    }) as unknown as typeof fetch;
+    await assert.rejects(repoWith(fake).getRefSha("x"), (e: any) => {
+      assert.ok(e instanceof GitHubError);
+      assert.equal(e.status, 502);
+      assert.match(e.message, /GitHub inacessível: GET/);
+      assert.equal(e.message.includes(TOKEN), false);
+      return true;
+    });
+  });
+
+  it("commitFiles com mapa vazio falha antes de chamar a API", async () => {
+    const { fake, calls } = makeFake();
+    await assert.rejects(repoWith(fake).commitFiles("feat", {}, "msg"), /nenhum arquivo/);
+    assert.equal(calls.length, 0);
+  });
+});
