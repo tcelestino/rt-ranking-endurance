@@ -1,0 +1,43 @@
+// Worker do backoffice: https://ranking-endurance.tcelestino.dev.br/backoffice
+//
+// Segredos (NUNCA neste arquivo; definir com `wrangler secret put -c worker/wrangler.jsonc <NOME>`):
+//   CLERK_SECRET_KEY  chave secreta do Clerk
+//   GITHUB_TOKEN      token do GitHub com acesso ao repositório
+//
+// Desenvolvimento local: copie worker/.dev.vars.example para worker/.dev.vars (ignorado pelo git).
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "rt-ranking-backoffice",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat: o código compartilhado de processor/ importa fs/path (o Worker nunca os chama)
+  "compatibility_flags": ["nodejs_compat"],
+
+  // sem URL pública alternativa: o acesso é só pela rota abaixo
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "ranking-endurance.tcelestino.dev.br/backoffice*", "zone_name": "tcelestino.dev.br" }],
+
+  // run_worker_first: o Worker (e não a camada de assets) trata toda requisição, para que
+  // headers de segurança e autenticação sempre rodem
+  "assets": { "directory": "./dist-assets", "binding": "ASSETS", "run_worker_first": true },
+
+  "ai": { "binding": "AI" },
+
+  "kv_namespaces": [
+    // id fictício: a Task 13 cria o namespace real e substitui este valor
+    { "binding": "IMAGE_CACHE", "id": "REPLACE_WITH_KV_ID" },
+  ],
+
+  // 60 requisições a cada 60 s por chave
+  "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1201", "simple": { "limit": 60, "period": 60 } }],
+
+  "vars": {
+    "ALLOWED_ORIGIN": "https://ranking-endurance.tcelestino.dev.br",
+    "GITHUB_REPO": "tcelestino/rt-ranking-endurance",
+    // chave publicável é pública; a Task 13 define a real
+    "CLERK_PUBLISHABLE_KEY": "pk_live_REPLACE_ME",
+  },
+
+  "observability": { "enabled": true },
+}

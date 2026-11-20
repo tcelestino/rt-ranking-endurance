@@ -1,0 +1,4 @@
+# Copie para worker/.dev.vars (ignorado pelo git) e preencha com chaves de DESENVOLVIMENTO.
+CLERK_SECRET_KEY=
+CLERK_PUBLISHABLE_KEY=
+GITHUB_TOKEN=

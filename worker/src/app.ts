@@ -37,6 +37,8 @@ export interface AppEnv {
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_SECRET_KEY: string;
   RATE_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  // Assets estáticos do frontend (binding do Workers Assets)
+  ASSETS: { fetch(req: Request): Promise<Response> };
 }
 
 export interface AppDeps<E extends AppEnv = AppEnv> {
@@ -140,11 +142,14 @@ function buildState(source: DataSource, { month, year }: { year: number; month: 
 }
 
 export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
+  // root cobre qualquer caminho (inclusive fora de /backoffice) para que todas as respostas, 404 incluídos,
+  // saiam com os headers de segurança; as rotas de /backoffice ficam no sub-app.
+  const root = new Hono<{ Bindings: E; Variables: AuthVariables }>();
   const app = new Hono<{ Bindings: E; Variables: AuthVariables }>().basePath('/backoffice');
 
   // Ordem importa: headers de segurança primeiro (valem também para 401/429), depois rate limit,
   // a rota pública de config e só então origem e autenticação.
-  app.use(
+  root.use(
     '*',
     securityHeaders((env: E) => clerkFrontendHost(env.CLERK_PUBLISHABLE_KEY)),
   );
@@ -466,7 +471,18 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
     return c.json({ log, prUrl, markdown });
   });
 
-  app.onError(onError);
-  app.notFound(notFound);
-  return app;
+  root.route('/', app);
+  root.onError(onError);
+  // Sem rota de API: GET/HEAD sob /backoffice vão para os assets (sem autenticação: só arquivos estáticos
+  // públicos); /backoffice sem barra redireciona porque o index.html usa URLs relativas.
+  root.notFound((c) => {
+    const path = c.req.path;
+    const isRead = c.req.method === 'GET' || c.req.method === 'HEAD';
+    if (isRead && path === '/backoffice') return c.redirect('/backoffice/', 308);
+    if (isRead && path.startsWith('/backoffice/') && !path.startsWith('/backoffice/api/')) {
+      return c.env.ASSETS.fetch(c.req.raw);
+    }
+    return notFound(c);
+  });
+  return root;
 }

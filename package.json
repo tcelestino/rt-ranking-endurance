@@ -16,6 +16,10 @@
     "backoffice:dev": "tsx watch backoffice/src/server.ts",
     "backoffice:check": "tsc -p backoffice --noEmit",
     "worker:check": "tsc -p worker --noEmit",
+    "worker:assets": "node worker/scripts/build-assets.mjs",
+    "worker:dev": "npm run worker:assets && wrangler dev -c worker/wrangler.jsonc",
+    "worker:deploy": "npm run worker:assets && wrangler deploy -c worker/wrangler.jsonc",
+    "worker:dryrun": "npm run worker:assets && wrangler deploy --dry-run --outdir .dry-run -c worker/wrangler.jsonc",
     "serve": "npx serve static",
     "copy:ranking": "bash scripts/copy-ranking.sh",
     "deploy": "bash scripts/deploy.sh"

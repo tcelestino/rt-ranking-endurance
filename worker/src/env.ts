@@ -9,4 +9,5 @@ export interface Env {
   GITHUB_REPO: string; // "owner/repo"
   ALLOWED_ORIGIN: string;
   CURRENT_MONTH?: string;
+  CLOUDFLARE_AI_MODEL?: string;
 }

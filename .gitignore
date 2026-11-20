@@ -17,4 +17,5 @@ docs/superpowers/
 # Worker (Cloudflare)
 worker/dist-assets/
 worker/.dev.vars
+.dry-run/
 .wrangler/

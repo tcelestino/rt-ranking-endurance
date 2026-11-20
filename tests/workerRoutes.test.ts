@@ -32,11 +32,12 @@ const admin: VerifyResult = { ok: true, userId: 'user_1', claims: { metadata: { 
 
 function env(success = true, extra: Partial<AppEnv> = {}): AppEnv {
   return {
-    ...extra,
     ALLOWED_ORIGIN: ORIGIN,
     CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
     CLERK_SECRET_KEY: 'sk_test_x',
     RATE_LIMITER: { limit: async () => ({ success }) },
+    ASSETS: { fetch: async () => new Response('nao deveria ser usado', { status: 500 }) },
+    ...extra,
   };
 }
 
@@ -785,4 +786,56 @@ test('DELETE /api/runners/:name decodifica nome acentuado', async () => {
   } finally {
     log.restore();
   }
+});
+
+test('assets: GET /backoffice/ vem do binding ASSETS com headers de seguranca e sem autenticacao', async () => {
+  const seen: string[] = [];
+  const assets = {
+    fetch: async (req: Request) => {
+      seen.push(new URL(req.url).pathname);
+      return new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html' } });
+    },
+  };
+  const res = await build({ verifyResult: { ok: false } }).request('/backoffice/', {}, env(true, { ASSETS: assets }));
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), '<html></html>');
+  assert.deepEqual(seen, ['/backoffice/']);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'self'/);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('assets: resposta com headers imutaveis nao gera 500', async () => {
+  const assets = { fetch: async () => Response.redirect('https://example.com/', 302) };
+  const res = await build().request('/backoffice/app.js', {}, env(true, { ASSETS: assets }));
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+});
+
+test('GET /backoffice sem barra redireciona para /backoffice/', async () => {
+  const res = await build().request('/backoffice', {}, env());
+  assert.equal(res.status, 308);
+  assert.equal(new URL(res.headers.get('location') ?? '', ORIGIN).pathname, '/backoffice/');
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+});
+
+test('assets: arquivo inexistente repassa o 404 do binding com X-Robots-Tag', async () => {
+  const assets = { fetch: async () => new Response('nope', { status: 404 }) };
+  const res = await build().request('/backoffice/inexistente.js', {}, env(true, { ASSETS: assets }));
+  assert.equal(res.status, 404);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+});
+
+test('fora de /backoffice responde 404 do Worker com X-Robots-Tag, sem consultar assets', async () => {
+  const res = await build().request('/fora-do-backoffice', {}, env());
+  assert.equal(res.status, 404);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+});
+
+test('rota de API desconhecida responde 404 JSON sem consultar assets e /api/state segue exigindo sessao', async () => {
+  const unknown = await build().request('/backoffice/api/nao-existe', {}, env());
+  assert.equal(unknown.status, 404);
+  assert.deepEqual(await unknown.json(), { error: 'Não encontrado' });
+  const state = await build({ verifyResult: { ok: false } }).request('/backoffice/api/state', {}, env());
+  assert.equal(state.status, 401);
 });
