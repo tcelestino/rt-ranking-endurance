@@ -27,8 +27,9 @@ const files: Record<string, string> = {
 
 const admin: VerifyResult = { ok: true, userId: 'user_1', claims: { metadata: { role: 'admin' } } };
 
-function env(success = true): AppEnv {
+function env(success = true, extra: Partial<AppEnv> = {}): AppEnv {
   return {
+    ...extra,
     ALLOWED_ORIGIN: ORIGIN,
     CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
     CLERK_SECRET_KEY: 'sk_test_x',
@@ -188,6 +189,33 @@ test('GET /api/publish/status devolve publishing false e as pendencias', async (
   assert.deepEqual(await res.json(), { publishing: false, pendingChanges: ['data/2026/female-maio.json'] });
 });
 
+test('GET /api/state respeita CURRENT_MONTH do env', async () => {
+  const res = await build().request('/backoffice/api/state', {}, env(true, { CURRENT_MONTH: '4' }));
+  assert.equal(((await res.json()) as { month: number }).month, 4);
+});
+
+test('GET /api/stats usa o now injetado para decidir os meses fechados', async () => {
+  const winnerMonths = async (now: string) => {
+    const app = build({ now: () => new Date(now) });
+    const body = (await (await app.request('/backoffice/api/stats', {}, env())).json()) as {
+      winners: { month: number }[];
+      months: { month: number; closed: boolean }[];
+    };
+    return {
+      winners: body.winners.map((w) => w.month),
+      closed: body.months.filter((m) => m.closed).map((m) => m.month),
+    };
+  };
+  // com now em novembro, maio fecha; com now em maio, nenhum mês fica fechado
+  assert.deepEqual(await winnerMonths('2026-11-20T15:00:00Z'), { winners: [5], closed: [5] });
+  assert.deepEqual(await winnerMonths('2026-05-20T15:00:00Z'), { winners: [], closed: [] });
+});
+
+test('rateLimit roda antes de requireAdmin: sem sessao e limitado responde 429', async () => {
+  const res = await build({ verifyResult: { ok: false } }).request('/backoffice/api/state', {}, env(false));
+  assert.equal(res.status, 429);
+});
+
 test('401 e 429 ainda carregam X-Robots-Tag e CSP', async () => {
   const unauthorized = await build({ verifyResult: { ok: false } }).request('/backoffice/api/state', {}, env());
   assert.equal(unauthorized.status, 401);
@@ -221,7 +249,8 @@ test('erros: rota inexistente 404, erro interno 500 sem vazar mensagem, GitHubEr
     });
     const internal = await boom.request('/backoffice/api/publish/status', {}, env());
     assert.equal(internal.status, 500);
-    assert.deepEqual(await internal.json(), { error: 'Erro interno do servidor' });
+    const internalBody = await internal.json();
+    assert.deepEqual(internalBody, { error: 'Erro interno do servidor' });
 
     const gh = build({
       workingCopy: () => ({
@@ -234,7 +263,8 @@ test('erros: rota inexistente 404, erro interno 500 sem vazar mensagem, GitHubEr
     const bad = await gh.request('/backoffice/api/publish/status', {}, env());
     assert.equal(bad.status, 502);
     assert.deepEqual(await bad.json(), { error: 'Falha ao falar com o GitHub' });
-    assert.ok(log.lines.some((l) => l.includes('erro nao tratado')));
+    assert.ok(log.lines.some((l) => l.includes('erro nao tratado') && l.includes('stack')));
+    assert.ok(!JSON.stringify(internalBody).includes('stack'));
   } finally {
     log.restore();
   }

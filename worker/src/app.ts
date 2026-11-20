@@ -26,6 +26,7 @@ import type { WorkingCopy } from './workingCopy';
 // que checa tests/). Env é atribuível a este tipo.
 export interface AppEnv {
   ALLOWED_ORIGIN: string;
+  CURRENT_MONTH?: string;
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_SECRET_KEY: string;
   RATE_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
@@ -54,9 +55,12 @@ function parsePeriodParam(value: string | undefined, label: string, fallback: nu
   return parsed;
 }
 
-function buildState(source: DataSource, now: Date) {
-  const month = getCurrentMonth(now);
-  const year = getCurrentYear(now);
+// Mês e ano vigentes, calculados uma vez por requisição (relógio injetado + CURRENT_MONTH do env).
+function currentPeriod(now: Date, env: AppEnv): { year: number; month: number } {
+  return { year: getCurrentYear(now), month: getCurrentMonth(now, env.CURRENT_MONTH) };
+}
+
+function buildState(source: DataSource, { month, year }: { year: number; month: number }) {
   const participants = loadParticipants(source);
 
   const result = [];
@@ -107,23 +111,22 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
 
   app.get('/api/state', async (c) => {
     const source = await deps.workingCopy(c.env).load();
-    const state = buildState(source, deps.now());
-    let user: { name: string | null; email: string | null } = { name: null, email: null };
-    try {
-      user = await deps.userSummary(c.env, c.get('userId'));
-    } catch (err) {
+    const period = currentPeriod(deps.now(), c.env);
+    // a busca no Clerk roda em paralelo com o cálculo do estado; falha degrada para nulos
+    const userPromise = deps.userSummary(c.env, c.get('userId')).catch((err: unknown) => {
       logWarn('falha ao buscar dados do usuário no Clerk', {
         err: err instanceof Error ? { name: err.name, message: err.message } : { message: String(err) },
       });
-    }
+      return { name: null, email: null };
+    });
+    const state = buildState(source, period);
+    const user = await userPromise;
     return c.json({ ...state, user });
   });
 
   app.get('/api/ranking', async (c) => {
-    const now = deps.now();
     const source = await deps.workingCopy(c.env).load();
-    const currentYear = getCurrentYear(now);
-    const currentMonth = getCurrentMonth(now);
+    const { year: currentYear, month: currentMonth } = currentPeriod(deps.now(), c.env);
     const periods = listRankingPeriods(source);
     const hasData = (y: number, m: number) => periods.some((p) => p.year === y && p.months.includes(m));
 
@@ -170,7 +173,7 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
     const year = parsePeriodParam(c.req.query('year'), 'Ano', latest.year);
     if (!periods.some((p) => p.year === year)) throw new HttpError(404, `Não há dados para ${year}`);
 
-    return c.json(buildStats(year, source));
+    return c.json(buildStats(year, source, currentPeriod(deps.now(), c.env)));
   });
 
   // publishing é sempre false: o GitHub é o árbitro de publicações concorrentes (compat com o frontend)

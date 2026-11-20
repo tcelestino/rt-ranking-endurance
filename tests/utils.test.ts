@@ -21,3 +21,22 @@ test('CURRENT_MONTH sobrescreve o mês', () => {
   process.env.CURRENT_MONTH = '4';
   assert.equal(getCurrentMonth(new Date('2026-12-15T12:00:00Z')), 4);
 });
+
+test('getCurrentMonth com override explícito vence o relógio e process.env', () => {
+  process.env.CURRENT_MONTH = '7';
+  assert.equal(getCurrentMonth(new Date('2026-12-15T12:00:00Z'), '4'), 4);
+});
+
+test('getCurrentMonth com override indefinido ignora process.env e usa o relógio', () => {
+  process.env.CURRENT_MONTH = '7';
+  assert.equal(getCurrentMonth(new Date('2026-12-15T12:00:00Z'), undefined), 12);
+});
+
+test('getCurrentMonth com override inválido cai no relógio', () => {
+  assert.equal(getCurrentMonth(new Date('2026-12-15T12:00:00Z'), '13'), 12);
+});
+
+test('getCurrentMonth sem override mantém process.env.CURRENT_MONTH', () => {
+  process.env.CURRENT_MONTH = '7';
+  assert.equal(getCurrentMonth(new Date('2026-12-15T12:00:00Z')), 7);
+});

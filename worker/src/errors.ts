@@ -20,7 +20,7 @@ export const onError: ErrorHandler = (err, c) => {
     return c.json({ error: err.message }, err.status as ContentfulStatusCode);
   }
   const path = new URL(c.req.url).pathname;
-  const info = { err: { name: err.name, message: err.message }, method: c.req.method, path };
+  const info = { err: { name: err.name, message: err.message, stack: err.stack }, method: c.req.method, path };
   if (err instanceof GitHubError) {
     logError('falha ao falar com o GitHub', { ...info, status: err.status });
     return c.json({ error: 'Falha ao falar com o GitHub' }, 502);

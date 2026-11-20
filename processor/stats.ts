@@ -118,9 +118,16 @@ function loadMonth(month: number, year: number, runners: Runner[], source: DataS
   return { month, activities, paced, detailed };
 }
 
-function isClosed(month: number, year: number): boolean {
-  const currentYear = getCurrentYear();
-  return year < currentYear || (year === currentYear && month < getCurrentMonth());
+export interface CurrentPeriod {
+  year: number;
+  month: number;
+}
+
+// Sem `current`, usa o relógio e CURRENT_MONTH (CLI/backoffice local); o Worker passa o período já calculado.
+function isClosed(month: number, year: number, current?: CurrentPeriod): boolean {
+  const currentYear = current?.year ?? getCurrentYear();
+  const currentMonth = current?.month ?? getCurrentMonth();
+  return year < currentYear || (year === currentYear && month < currentMonth);
 }
 
 function runnerKm(data: MonthData, runner: Runner): number[] {
@@ -135,7 +142,7 @@ function paceOf(activities: PacedActivity[]): number | null {
   return averagePace({ km: sum(activities.map((a) => a.km)), seconds: sum(activities.map((a) => a.km * a.pace)) });
 }
 
-export function buildMonthStats(data: MonthData, year: number, runners: Runner[]): MonthStats {
+export function buildMonthStats(data: MonthData, year: number, runners: Runner[], current?: CurrentPeriod): MonthStats {
   const genderTotal = (gender: Gender) =>
     sum(runners.filter((r) => r.gender === gender).map((r) => sum(runnerKm(data, r))));
   const female = genderTotal('female');
@@ -147,7 +154,7 @@ export function buildMonthStats(data: MonthData, year: number, runners: Runner[]
   return {
     month: data.month,
     monthName: displayMonthName(data.month),
-    closed: isClosed(data.month, year),
+    closed: isClosed(data.month, year, current),
     female,
     male,
     total: female + male,
@@ -163,9 +170,9 @@ function findWinner(gender: Gender, month: number, year: number, source: DataSou
   return first && first.km > 0 ? { name: first.name, km: first.km } : null;
 }
 
-function buildWinners(months: MonthData[], year: number, source: DataSource): MonthWinners[] {
+function buildWinners(months: MonthData[], year: number, source: DataSource, current?: CurrentPeriod): MonthWinners[] {
   return months
-    .filter((data) => isClosed(data.month, year))
+    .filter((data) => isClosed(data.month, year, current))
     .map((data) => ({
       month: data.month,
       monthName: displayMonthName(data.month),
@@ -262,21 +269,21 @@ function calcYearTotal(year: number, months: number[], runners: Runner[], source
   return sum(months.map((month) => sum([...loadMonth(month, year, runners, source).activities.values()].map(sum))));
 }
 
-export function buildStats(year: number, source: DataSource = fsDataSource): Stats {
+export function buildStats(year: number, source: DataSource = fsDataSource, current?: CurrentPeriod): Stats {
   const periods = listRankingPeriods(source);
   const period = periods.find((p) => p.year === year);
   if (!period) throw new Error(`Não há dados para ${year}`);
 
   const runners = loadRunners(source);
   const months = period.months.map((month) => loadMonth(month, year, runners, source));
-  const winners = buildWinners(months, year, source);
+  const winners = buildWinners(months, year, source, current);
   const ranked = buildRunnerStats(months, runners, winners);
 
   return {
     year,
     years: periods.map((p) => p.year),
     yearTotals: periods.map((p) => ({ year: p.year, km: calcYearTotal(p.year, p.months, runners, source) })),
-    months: months.map((data) => buildMonthStats(data, year, runners)),
+    months: months.map((data) => buildMonthStats(data, year, runners, current)),
     runners: ranked,
     winners,
     cumulativeTop: buildCumulativeTop(months, runners, ranked),
