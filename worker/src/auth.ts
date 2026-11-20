@@ -19,12 +19,29 @@ function createClient(env: ClerkEnv) {
   return createClerkClient({ secretKey: env.CLERK_SECRET_KEY, publishableKey: env.CLERK_PUBLISHABLE_KEY });
 }
 
+type ClientFactory = typeof createClient;
+
 // Valida o session token do Clerk. Falha fechada: qualquer exceção vira { ok: false }.
-export function clerkVerifier(env: ClerkEnv & { ALLOWED_ORIGIN: string }): (req: Request) => Promise<VerifyResult> {
+// Só aceita "Authorization: Bearer <token>": o cookie __session (first-party na mesma origem) nunca autentica a API,
+// e o Clerk recebe um Request novo apenas com esse header.
+export function clerkVerifier(
+  env: ClerkEnv & { ALLOWED_ORIGIN: string },
+  clientFactory: ClientFactory = createClient,
+): (req: Request) => Promise<VerifyResult> {
   return async (req) => {
+    const authorization = req.headers.get('authorization')?.trim() ?? '';
+    if (!/^Bearer\s+\S+$/i.test(authorization)) return { ok: false };
+
     try {
-      const state = await createClient(env).authenticateRequest(req, { authorizedParties: [env.ALLOWED_ORIGIN] });
-      if (!state.isAuthenticated) return { ok: false };
+      const bearerOnly = new Request(req.url, { method: req.method, headers: { authorization } });
+      const state = await clientFactory(env).authenticateRequest(bearerOnly, {
+        authorizedParties: [env.ALLOWED_ORIGIN],
+      });
+      if (!state.isAuthenticated) {
+        const reason = (state as { reason?: unknown }).reason;
+        logWarn('sessão do Clerk não autenticada', reason ? { reason: String(reason) } : {});
+        return { ok: false };
+      }
       const auth = state.toAuth();
       return {
         ok: true,
@@ -56,7 +73,7 @@ export function requireAdmin(
     }
 
     if (result.claims.metadata?.role !== ADMIN_ROLE) {
-      logWarn(`acesso negado: usuario sem role "${ADMIN_ROLE}"`, {
+      logWarn(`acesso negado: usuário sem role "${ADMIN_ROLE}"`, {
         userId: result.userId,
         method: c.req.method,
         path: new URL(c.req.url).pathname,
