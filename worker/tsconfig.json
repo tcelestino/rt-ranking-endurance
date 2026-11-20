@@ -17,6 +17,13 @@
     "../processor/cacheManager.ts",
     "../processor/dataSource.ts",
     "../processor/kmPrompt.ts",
-    "../processor/pace.ts"
+    "../processor/pace.ts",
+    "../processor/jsonUpdater.ts",
+    "../processor/manifest.ts",
+    "../processor/participantsParser.ts",
+    "../processor/ranking.ts",
+    "../processor/stats.ts",
+    "../processor/paceStats.ts",
+    "../processor/utils.ts"
   ]
 }
