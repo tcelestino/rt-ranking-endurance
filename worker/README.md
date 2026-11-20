@@ -32,8 +32,14 @@ Checklist para executar manualmente. Cada ação externa (Clerk, GitHub, Cloudfl
 - [ ] `npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc`
 - [ ] Garantir que o `namespace_id` do `ratelimits` (`1201`) é único na conta
 - [ ] Conferir que não restam `REPLACE_WITH_KV_ID` nem `pk_live_REPLACE_ME` no `wrangler.jsonc`
+- [ ] `git grep -nE 'sk_(live|test)|ghp_|github_pat_' -- worker` não retorna nada
+- [ ] `git ls-files worker | grep dev.vars` mostra só `worker/.dev.vars.example`
+- [ ] `CURRENT_MONTH` NÃO está definido nas `vars` de produção
+- [ ] `CLERK_SECRET_KEY` e `GITHUB_TOKEN` jamais entram em `vars` (só `wrangler secret`)
 
 ## 4. Deploy
+
+Aviso: `npm run worker:deploy` publica imediatamente e a rota fica pública assim que sobe. A allowlist do Clerk e o role admin (seção 1) precisam estar configurados antes.
 
 - [ ] `npm run worker:dryrun` sem erros
 - [ ] `npm run worker:deploy`
@@ -50,8 +56,8 @@ Use `BASE=https://ranking-endurance.tcelestino.dev.br`.
 - [ ] `curl -sI $BASE/backoffice/api/state` traz `cache-control: no-store`
 - [ ] `curl -sI $BASE/backoffice/inexistente` retorna `404` com `x-robots-tag`
 - [ ] `curl -s -o /dev/null -w '%{http_code}' -X POST $BASE/backoffice/index.html` retorna `404`
-- [ ] `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' $BASE/backoffice/api/save` retorna `401` sem token
-- [ ] Mesmo POST com token válido retorna `403`
+- [ ] Origin errado é rejeitado antes da autenticação: `curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' $BASE/backoffice/api/save` retorna `403` ("Origem não permitida"), com ou sem token
+- [ ] Autenticação isolada: o mesmo POST com `-H 'Origin: https://ranking-endurance.tcelestino.dev.br'` e sem token retorna `401`
 - [ ] Nenhuma URL `*.workers.dev` nem de preview responde
 - [ ] Navegador sem violações de CSP no console (Clerk, Turnstile, Chart.js)
 - [ ] Login com o Google do admin entra; outra conta é barrada pela allowlist; conta sem role recebe `403`
