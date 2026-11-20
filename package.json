@@ -4,7 +4,7 @@
   "description": "Automação de atualização de rankings de corrida",
   "scripts": {
     "update": "tsx processor/index.ts",
-    "generate:manifest": "tsx processor/manifest.ts",
+    "generate:manifest": "tsx processor/manifestWriter.ts",
     "generate:markdown": "tsx processor/markdownGenerator.ts",
     "clear:images": "tsx processor/clearImages.ts",
     "clear:cache": "tsx processor/clearCache.ts",
@@ -15,23 +15,32 @@
     "backoffice": "tsx backoffice/src/server.ts",
     "backoffice:dev": "tsx watch backoffice/src/server.ts",
     "backoffice:check": "tsc -p backoffice --noEmit",
+    "worker:check": "tsc -p worker --noEmit",
+    "worker:assets": "node worker/scripts/build-assets.mjs",
+    "worker:dev": "npm run worker:assets && wrangler dev -c worker/wrangler.jsonc",
+    "worker:deploy": "npm run worker:assets && wrangler deploy -c worker/wrangler.jsonc",
+    "worker:dryrun": "npm run worker:assets && wrangler deploy --dry-run --outdir .dry-run -c worker/wrangler.jsonc",
     "serve": "npx serve static",
     "copy:ranking": "bash scripts/copy-ranking.sh",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
+    "@clerk/backend": "3.27.0",
     "@clerk/express": "2.1.75",
     "@google/genai": "2.8.0",
     "dotenv": "17.4.2",
     "express": "5.2.1",
+    "hono": "4.13.16",
     "pino": "10.4.0",
     "pino-http": "11.0.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261104.1",
     "@types/express": "5.0.6",
     "@types/node": "25.9.3",
     "pino-pretty": "13.2.0",
     "tsx": "4.22.4",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "wrangler": "4.158.0"
   }
 }

@@ -31,5 +31,11 @@ jobs:
       - name: Verificar tipos do backoffice
         run: npm run backoffice:check
 
+      - name: Verificar tipos do worker
+        run: npm run worker:check
+
       - name: Testes
         run: npm test
+
+      - name: Verificar bundle do worker
+        run: npm run worker:dryrun

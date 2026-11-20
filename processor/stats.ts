@@ -1,9 +1,10 @@
+import { DataSource, fsDataSource } from './dataSource';
 import { loadParticipants, normalize } from './participantsParser';
 import { getMonthName, loadMonthDataSync } from './jsonUpdater';
 import { averagePace } from './pace';
 import { buildPaceStats, type Gender, type PaceRow, type PaceStats } from './paceStats';
 import { calcMonthlyRanking, listRankingPeriods, MONTH_DISPLAY } from './ranking';
-import { capitalizeFirstLetter, getCurrentMonth } from './utils';
+import { capitalizeFirstLetter, getCurrentMonth, getCurrentYear } from './utils';
 
 const GENDERS: Gender[] = ['female', 'male'];
 const TOP_CUMULATIVE = 10;
@@ -93,17 +94,17 @@ function displayMonthName(month: number): string {
   return capitalizeFirstLetter(MONTH_DISPLAY[getMonthName(month)]);
 }
 
-function loadRunners(): Runner[] {
-  const participants = loadParticipants();
+function loadRunners(source: DataSource): Runner[] {
+  const participants = loadParticipants(source);
   return GENDERS.flatMap((gender) => participants[gender].map((name) => ({ key: normalize(name), name, gender })));
 }
 
-function loadMonth(month: number, year: number, runners: Runner[]): MonthData {
+function loadMonth(month: number, year: number, runners: Runner[], source: DataSource): MonthData {
   const known = new Set(runners.map((r) => r.key));
   const activities: MonthActivities = new Map();
   const paced = new Map<string, PacedActivity[]>();
   for (const gender of GENDERS) {
-    for (const record of loadMonthDataSync(gender, month, year)) {
+    for (const record of loadMonthDataSync(gender, month, year, source)) {
       const key = normalize(record.name);
       if (!known.has(key)) continue;
       activities.set(key, [...(activities.get(key) ?? []), ...record.km.filter((km) => km > 0)]);
@@ -117,9 +118,16 @@ function loadMonth(month: number, year: number, runners: Runner[]): MonthData {
   return { month, activities, paced, detailed };
 }
 
-function isClosed(month: number, year: number): boolean {
-  const currentYear = new Date().getFullYear();
-  return year < currentYear || (year === currentYear && month < getCurrentMonth());
+export interface CurrentPeriod {
+  year: number;
+  month: number;
+}
+
+// Sem `current`, usa o relógio e CURRENT_MONTH (CLI/backoffice local); o Worker passa o período já calculado.
+function isClosed(month: number, year: number, current?: CurrentPeriod): boolean {
+  const currentYear = current?.year ?? getCurrentYear();
+  const currentMonth = current?.month ?? getCurrentMonth();
+  return year < currentYear || (year === currentYear && month < currentMonth);
 }
 
 function runnerKm(data: MonthData, runner: Runner): number[] {
@@ -134,7 +142,7 @@ function paceOf(activities: PacedActivity[]): number | null {
   return averagePace({ km: sum(activities.map((a) => a.km)), seconds: sum(activities.map((a) => a.km * a.pace)) });
 }
 
-export function buildMonthStats(data: MonthData, year: number, runners: Runner[]): MonthStats {
+export function buildMonthStats(data: MonthData, year: number, runners: Runner[], current?: CurrentPeriod): MonthStats {
   const genderTotal = (gender: Gender) =>
     sum(runners.filter((r) => r.gender === gender).map((r) => sum(runnerKm(data, r))));
   const female = genderTotal('female');
@@ -146,7 +154,7 @@ export function buildMonthStats(data: MonthData, year: number, runners: Runner[]
   return {
     month: data.month,
     monthName: displayMonthName(data.month),
-    closed: isClosed(data.month, year),
+    closed: isClosed(data.month, year, current),
     female,
     male,
     total: female + male,
@@ -157,19 +165,19 @@ export function buildMonthStats(data: MonthData, year: number, runners: Runner[]
   };
 }
 
-function findWinner(gender: Gender, month: number, year: number): MonthWinner | null {
-  const [first] = calcMonthlyRanking(gender, month, year);
+function findWinner(gender: Gender, month: number, year: number, source: DataSource): MonthWinner | null {
+  const [first] = calcMonthlyRanking(gender, month, year, source);
   return first && first.km > 0 ? { name: first.name, km: first.km } : null;
 }
 
-function buildWinners(months: MonthData[], year: number): MonthWinners[] {
+function buildWinners(months: MonthData[], year: number, source: DataSource, current?: CurrentPeriod): MonthWinners[] {
   return months
-    .filter((data) => isClosed(data.month, year))
+    .filter((data) => isClosed(data.month, year, current))
     .map((data) => ({
       month: data.month,
       monthName: displayMonthName(data.month),
-      female: findWinner('female', data.month, year),
-      male: findWinner('male', data.month, year),
+      female: findWinner('female', data.month, year, source),
+      male: findWinner('male', data.month, year, source),
     }));
 }
 
@@ -257,25 +265,25 @@ function buildPaceRows(months: MonthData[], runners: Runner[]): PaceRow[] {
   );
 }
 
-function calcYearTotal(year: number, months: number[], runners: Runner[]): number {
-  return sum(months.map((month) => sum([...loadMonth(month, year, runners).activities.values()].map(sum))));
+function calcYearTotal(year: number, months: number[], runners: Runner[], source: DataSource): number {
+  return sum(months.map((month) => sum([...loadMonth(month, year, runners, source).activities.values()].map(sum))));
 }
 
-export function buildStats(year: number): Stats {
-  const periods = listRankingPeriods();
+export function buildStats(year: number, source: DataSource = fsDataSource, current?: CurrentPeriod): Stats {
+  const periods = listRankingPeriods(source);
   const period = periods.find((p) => p.year === year);
   if (!period) throw new Error(`Não há dados para ${year}`);
 
-  const runners = loadRunners();
-  const months = period.months.map((month) => loadMonth(month, year, runners));
-  const winners = buildWinners(months, year);
+  const runners = loadRunners(source);
+  const months = period.months.map((month) => loadMonth(month, year, runners, source));
+  const winners = buildWinners(months, year, source, current);
   const ranked = buildRunnerStats(months, runners, winners);
 
   return {
     year,
     years: periods.map((p) => p.year),
-    yearTotals: periods.map((p) => ({ year: p.year, km: calcYearTotal(p.year, p.months, runners) })),
-    months: months.map((data) => buildMonthStats(data, year, runners)),
+    yearTotals: periods.map((p) => ({ year: p.year, km: calcYearTotal(p.year, p.months, runners, source) })),
+    months: months.map((data) => buildMonthStats(data, year, runners, current)),
     runners: ranked,
     winners,
     cumulativeTop: buildCumulativeTop(months, runners, ranked),

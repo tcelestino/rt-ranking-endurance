@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { DataSource, fsDataSource } from './dataSource';
+import { getCurrentYear } from './utils';
 import { normalize } from './participantsParser';
 
 export interface ParticipantRecord {
@@ -24,41 +24,24 @@ const MONTH_NAMES: Record<number, string> = {
   12: 'dezembro',
 };
 
-export function getFullYear(): number {
-  return new Date().getFullYear();
-}
-
 export function getMonthName(month: number): string {
   const name = MONTH_NAMES[month];
   if (!name) throw new Error(`Mês inválido: ${month}`);
   return name;
 }
 
-export function getDataFilePath(gender: 'female' | 'male', month: number, year = getFullYear()): string {
-  const monthStr = getMonthName(month);
-
-  return path.resolve(process.cwd(), 'data', year.toString(), `${gender}-${monthStr}.json`);
-}
-
-export async function loadMonthData(gender: 'female' | 'male', month: number): Promise<ParticipantRecord[]> {
-  const filePath = getDataFilePath(gender, month);
-  try {
-    const raw = await fs.promises.readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as ParticipantRecord[];
-  } catch (err: any) {
-    if (err.code === 'ENOENT') return [];
-    throw err;
-  }
+export function monthRelPath(gender: 'female' | 'male', month: number, year = getCurrentYear()): string {
+  return `${year}/${gender}-${getMonthName(month)}.json`;
 }
 
 export function loadMonthDataSync(
   gender: 'female' | 'male',
   month: number,
-  year = getFullYear(),
+  year = getCurrentYear(),
+  source: DataSource = fsDataSource,
 ): ParticipantRecord[] {
-  const filePath = getDataFilePath(gender, month, year);
-  if (!fs.existsSync(filePath)) return [];
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ParticipantRecord[];
+  const raw = source.readText(monthRelPath(gender, month, year));
+  return raw === null ? [] : (JSON.parse(raw) as ParticipantRecord[]);
 }
 
 export function appendKm(
@@ -81,21 +64,4 @@ export function appendKm(
   }
   existing.km.push(km);
   return data;
-}
-
-export async function saveMonthData(
-  gender: 'female' | 'male',
-  month: number,
-  data: ParticipantRecord[],
-): Promise<void> {
-  const filePath = getDataFilePath(gender, month);
-  const dir = path.dirname(filePath);
-
-  try {
-    await fs.promises.mkdir(dir, { recursive: true });
-    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
-  } catch (err) {
-    console.error(`Erro ao salvar dados em ${filePath}:`, err);
-    throw err;
-  }
 }

@@ -17,6 +17,11 @@ npm run api:build    # compila a API para api/dist/
 npm run backoffice   # sobe o backoffice local em localhost:3002 (Workers AI)
 npm run backoffice:dev # backoffice com auto reload ao editar .ts (desenvolvimento)
 npm run backoffice:check # verifica tipos do backoffice
+npm run worker:dev   # Worker do backoffice local (wrangler dev, localhost:8787)
+npm run worker:check # verifica tipos do Worker
+npm run worker:assets # gera worker/dist-assets a partir de backoffice/public
+npm run worker:dryrun # build do Worker sem publicar
+npm run worker:deploy # publica o Worker na Cloudflare
 npx tsc --noEmit     # verifica tipos sem gerar arquivos
 ```
 
@@ -35,12 +40,20 @@ rt-ranking-endurance/
 │   └── assets/
 │       ├── app.js
 │       └── style.css
-├── backoffice/                 # Interface local (não deployado)
+├── backoffice/                 # Interface (public/ também é servido pelo Worker); src/ é o Express local
 │   ├── src/server.ts
 │   ├── public/                 # index.html, app.js, scroll.js, kmMask.js, paceMask.js, style.css
 │   └── tsconfig.json           # noEmit, inclui ../processor
-├── processor/                  # CLI local (não deployado)
+├── worker/                     # Backoffice na Cloudflare (Hono)
+│   ├── src/                    # app, auth, security, github, workingCopy, snapshot, kvImageCache, analyzer...
+│   ├── scripts/build-assets.mjs
+│   ├── wrangler.jsonc
+│   ├── .dev.vars.example
+│   └── README.md               # checklist de deploy e verificação
+├── processor/                  # CLI local; parte é reaproveitada pelo Worker
 │   ├── index.ts
+│   ├── dataSource.ts
+│   ├── jsonWriter.ts
 │   ├── imageAnalyzerGemini.ts
 │   ├── imageAnalyzerCloudflare.ts
 │   ├── kmPrompt.ts
@@ -50,6 +63,7 @@ rt-ranking-endurance/
 │   ├── imageFiles.ts
 │   ├── cacheManager.ts
 │   ├── manifest.ts
+│   ├── manifestWriter.ts
 │   ├── ranking.ts
 │   ├── stats.ts
 │   ├── paceStats.ts
@@ -72,7 +86,9 @@ O projeto tem quatro partes independentes:
 
 **`processor/imageAnalyzerGemini.ts`** — usa `gemini-2.0-flash` via `@google/genai`. Recebe o caminho da imagem e retorna `number` (km extraído).
 
-**`processor/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
+**`processor/jsonUpdater.ts`** — lógica pura dos registros mensais (sem I/O em disco). Funções principais: `appendKm`, `getMonthName`, `monthRelPath`, `loadMonthDataSync`.
+
+**`processor/jsonWriter.ts`** — leitura e escrita dos JSONs em `data/` no disco: `loadMonthData`, `saveMonthData`, `getDataFilePath`, `saveParticipants`.
 
 **`processor/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findParticipant()`.
 
@@ -86,7 +102,7 @@ O projeto tem quatro partes independentes:
 
 ### Fluxo 2 — `npm run generate:manifest` (geração do manifest)
 
-**`processor/manifest.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
+**`processor/manifest.ts`** — puro (`planNewMonth`, `isManifestCurrent`, sem fs); **`processor/manifestWriter.ts`** — `generateManifest` (wrapper com fs, CLI `npm run generate:manifest`). Lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
 - `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
 
 ### Backoffice — `npm run backoffice`
@@ -138,6 +154,41 @@ Scripts do `processor/` reaproveitados pelo backoffice exportam a função princ
 **`processor/kmPrompt.ts`** — prompt (`ACTIVITY_PROMPT`, resposta em JSON `{ km, pace }`) e `parseActivityResponse` compartilhados entre Gemini e Cloudflare.
 
 **`processor/pace.ts`** — `parsePace` (`5:45`, `5'45"` → segundos), `formatPace` (`5'45"/km`), `paceTotals`/`averagePace` (média ponderada pela distância).
+
+### Backoffice na Cloudflare (Worker)
+
+URL: `https://ranking-endurance.tcelestino.dev.br/backoffice`. O backoffice Express local acima continua existindo até o usuário confirmar a remoção, depois que o Worker estiver estável em produção. Checklist de deploy e verificação: `worker/README.md`.
+
+**Arquitetura** (`worker/`, Hono)
+- O Git é a fonte da verdade, via API do GitHub (sem fs/git no Worker). Cada "Salvar" é um commit atômico na branch `update-DD-MM-YYYY`; "Publicar" abre/mergeia o PR.
+- `WorkingCopy.save(build, message)`: o read-modify-write acontece dentro de `build`; em conflito refaz uma vez com snapshot novo e, persistindo, responde 409.
+- Snapshot de `data/` por requisição, com cache dos blobs por SHA via Cache API.
+- Cache de hash de imagens no KV `IMAGE_CACHE`; IA pelo binding Workers AI `AI`.
+- `processor/` recebe um `DataSource` por injeção: fs localmente, snapshot em memória no Worker (`dataSource.ts`, `jsonWriter.ts`, `manifestWriter.ts`).
+- Mês/ano são calculados em `America/Sao_Paulo`; `CURRENT_MONTH` sobrescreve o mês.
+- Exige o plano Workers Paid: cada `save` com cache frio faz ~40-45 subrequests (limite do Free: 50; cresce ~24 blobs por ano) e `/api/analyze` processa base64 de imagens de vários MB (CPU acima de 10 ms). No Free, a saída seria reduzir o snapshot (só os anos necessários / GraphQL com aliases). Detalhes em `worker/README.md`.
+
+**Segurança**
+- Clerk somente via `Authorization: Bearer` com `publicMetadata.role = "admin"`; cookies não são aceitos na API.
+- `requireSameOrigin` nas mutações; rate limit pelo binding `RATE_LIMITER`.
+- CSP, HSTS, nosniff e `X-Robots-Tag: noindex` em toda resposta; `/api/*` com `Cache-Control: no-store`.
+- `workers_dev` e preview URLs desativados; segredos só via `wrangler secret`.
+
+**Variáveis**
+
+| Nome | Tipo | Observação |
+|------|------|------------|
+| `CLERK_SECRET_KEY` | secret | `wrangler secret put -c worker/wrangler.jsonc` |
+| `GITHUB_TOKEN` | secret | PAT fine-grained (Contents e Pull requests RW), renovar anualmente |
+| `ALLOWED_ORIGIN` | var | origem de produção |
+| `GITHUB_REPO` | var | `owner/repo` |
+| `CLERK_PUBLISHABLE_KEY` | var | `pk_live_...` |
+| `CURRENT_MONTH` | var opcional | sobrescreve o mês vigente |
+| `CLOUDFLARE_AI_MODEL` | var opcional | modelo do Workers AI |
+
+**Dev local**: `worker/.dev.vars` (copie de `.dev.vars.example`) sobrescreve as `vars` do `wrangler.jsonc`. Nunca use o repositório nem a origem de produção em dev.
+
+**Diferenças do Express local**: falha na publicação responde 502 no Worker (500 com `log` no Express); `publishing` é sempre `false` em `/api/publish/status`.
 
 ### API — `api/src/server.ts`
 

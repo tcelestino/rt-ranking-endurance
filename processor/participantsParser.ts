@@ -1,14 +1,13 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { DataSource, fsDataSource } from './dataSource';
 
 export interface Participants {
   female: string[];
   male: string[];
 }
 
-export function loadParticipants(filePath?: string): Participants {
-  const resolved = filePath ?? path.resolve('data/runners.json');
-  const raw = fs.readFileSync(resolved, 'utf-8');
+export function loadParticipants(source: DataSource = fsDataSource): Participants {
+  const raw = source.readText('runners.json');
+  if (raw === null) throw new Error('data/runners.json não encontrado');
   return JSON.parse(raw) as Participants;
 }
 
@@ -40,11 +39,6 @@ export function findParticipant(
     };
   }
   return null;
-}
-
-export function saveParticipants(participants: Participants, filePath?: string): void {
-  const resolved = filePath ?? path.resolve('data/runners.json');
-  fs.writeFileSync(resolved, JSON.stringify(participants, null, 2) + '\n', 'utf-8');
 }
 
 export function addParticipant(participants: Participants, name: string, gender: 'female' | 'male'): string {
