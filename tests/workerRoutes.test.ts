@@ -43,8 +43,8 @@ function env(success = true, extra: Partial<AppEnv> = {}): AppEnv {
 type WorkingCopyFake = ReturnType<AppDeps['workingCopy']>;
 
 // Working copy em memória: grava os arquivos de cada save e registra commits e publicações.
-function fakeWorkingCopy(opts: { buildTwice?: boolean; failSave?: Error } = {}) {
-  let current: Record<string, string> = { ...files };
+function fakeWorkingCopy(opts: { buildTwice?: boolean; failSave?: Error; files?: Record<string, string> } = {}) {
+  let current: Record<string, string> = { ...(opts.files ?? files) };
   const saves: { files: Record<string, string>; message: string }[] = [];
   const published: boolean[] = [];
   const wc: WorkingCopyFake = {
@@ -421,23 +421,26 @@ test('POST /api/analyze com hash no cache responde cached true sem chamar a IA',
   }
 });
 
-test('POST /api/analyze rejeita imagem decodificada acima de 10 MB com 413 sem chamar a IA', async () => {
+test('POST /api/analyze aceita imagem de ~9 MB decodificada (corpo honesto)', async () => {
   const { app, analyzeCalls } = writeApp();
-  const big = Buffer.alloc(10 * 1024 * 1024 + 1, 1).toString('base64');
-  // Content-Length mentindo para passar pelo limitBody: a checagem real e no tamanho decodificado
-  const res = await post(
-    app,
-    '/api/analyze',
-    { name: 'Ana', mimeType: 'image/png', data: big },
-    { 'content-length': '100' },
-  );
+  const data = Buffer.alloc(9 * 1024 * 1024, 1).toString('base64');
+  const res = await post(app, '/api/analyze', { name: 'Ana', mimeType: 'image/png', data });
+  assert.equal(res.status, 200);
+  assert.equal(analyzeCalls.length, 1);
+});
+
+test('POST /api/analyze rejeita imagem de 10 MB + 30 KB decodificada com 413 pela checagem real, sem chamar a IA', async () => {
+  const { app, analyzeCalls } = writeApp();
+  const data = Buffer.alloc(10 * 1024 * 1024 + 30000, 1).toString('base64');
+  const res = await post(app, '/api/analyze', { name: 'Ana', mimeType: 'image/png', data });
   assert.equal(res.status, 413);
+  assert.deepEqual(await res.json(), { error: 'Imagem muito grande' });
   assert.equal(analyzeCalls.length, 0);
 });
 
 test('POST /api/analyze com Content-Length acima do limite responde 413', async () => {
   const { app } = writeApp();
-  const res = await post(app, '/api/analyze', {}, { 'content-length': String(11 * 1024 * 1024) });
+  const res = await post(app, '/api/analyze', {}, { 'content-length': String(14 * 1024 * 1024) });
   assert.equal(res.status, 413);
 });
 
@@ -690,4 +693,96 @@ test('POST /api/publish propaga o 409 do WorkingCopy', async () => {
   const app = build({ workingCopy: () => wc.wc });
   const res = await post(app, '/api/publish', { autoMerge: true });
   assert.equal(res.status, 409);
+});
+
+test('POST /api/publish nao publica quando a leitura do snapshot falha', async () => {
+  const wc = fakeWorkingCopy();
+  wc.wc.load = async () => {
+    throw new Error('falha de leitura');
+  };
+  const log = silence();
+  try {
+    const res = await post(build({ workingCopy: () => wc.wc }), '/api/publish', { autoMerge: true });
+    assert.equal(res.status, 500);
+    assert.deepEqual(wc.published, []);
+  } finally {
+    log.restore();
+  }
+});
+
+test('POST /api/save: falha no cache apos o commit usa logError e responde normalmente', async () => {
+  const log = silence();
+  try {
+    const wc = fakeWorkingCopy();
+    const cache = fakeImageCache();
+    cache.cache.set = async () => {
+      throw new Error('kv fora');
+    };
+    const app = build({ workingCopy: () => wc.wc, imageCache: () => cache.cache });
+    assert.equal((await post(app, '/api/save', { entries: [entry()] })).status, 200);
+    assert.equal(wc.saves.length, 1);
+    assert.ok(log.lines.some((l) => l.includes('"level":"error"') && l.includes('falha ao gravar imagem no cache')));
+  } finally {
+    log.restore();
+  }
+});
+
+test('POST /api/save limita entries e valida filename', async () => {
+  const { app, wc } = writeApp();
+  const many = Array.from({ length: 201 }, (_, i) => entry({ hash: i.toString(16).padStart(64, '0') }));
+  assert.equal((await post(app, '/api/save', { entries: many })).status, 400);
+  assert.equal((await post(app, '/api/save', { entries: [entry({ filename: 'x'.repeat(256) })] })).status, 400);
+  assert.equal((await post(app, '/api/save', { entries: [entry({ filename: 'a\nb.png' })] })).status, 400);
+  assert.equal(wc.saves.length, 0);
+  assert.equal((await post(app, '/api/save', { entries: [entry({ filename: 'x'.repeat(255) })] })).status, 200);
+});
+
+test('POST /api/runners limita o tamanho e rejeita caracteres de controle no nome', async () => {
+  const { app, wc } = writeApp();
+  assert.equal((await post(app, '/api/runners', { name: 'x'.repeat(101), gender: 'male' })).status, 400);
+  assert.equal((await post(app, '/api/runners', { name: 'Jo\u0007ao', gender: 'male' })).status, 400);
+  assert.equal(wc.saves.length, 0);
+});
+
+test('POST /api/new-month: falha ao limpar o cache apos o commit usa logError e responde normalmente', async () => {
+  const log = silence();
+  try {
+    const wc = fakeWorkingCopy();
+    const cache = fakeImageCache();
+    cache.cache.clear = async () => {
+      throw new Error('kv fora');
+    };
+    const app = build({
+      workingCopy: () => wc.wc,
+      imageCache: () => cache.cache,
+      now: () => new Date('2026-12-02T15:00:00Z'),
+    });
+    assert.equal((await post(app, '/api/new-month', {})).status, 200);
+    assert.equal(wc.saves.length, 1);
+    assert.ok(log.lines.some((l) => l.includes('"level":"error"') && l.includes('falha ao limpar o cache')));
+  } finally {
+    log.restore();
+  }
+});
+
+test('DELETE /api/runners/:name decodifica nome acentuado', async () => {
+  const log = silence();
+  try {
+    const wc = fakeWorkingCopy({
+      files: { ...files, 'runners.json': JSON.stringify({ female: ['Ana', 'Júlia'], male: ['Bruno'] }) },
+    });
+    const app = build({ workingCopy: () => wc.wc });
+    const res = await app.request(
+      '/backoffice/api/runners/J%C3%BAlia',
+      { method: 'DELETE', headers: { origin: ORIGIN } },
+      env(),
+    );
+    assert.equal(res.status, 200);
+    assert.equal(
+      wc.saves[0].files['runners.json'],
+      JSON.stringify({ female: ['Ana'], male: ['Bruno'] }, null, 2) + '\n',
+    );
+  } finally {
+    log.restore();
+  }
 });

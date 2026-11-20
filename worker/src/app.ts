@@ -25,7 +25,7 @@ import { capitalizeFirstLetter, getCurrentMonth, getCurrentYear } from '../../pr
 import { requireAdmin, type AuthVariables, type VerifyResult } from './auth';
 import { base64ToBytes, sha256Hex } from './bytes';
 import { HttpError, notFound, onError } from './errors';
-import { logInfo, logWarn } from './logger';
+import { logError, logInfo, logWarn } from './logger';
 import { clerkFrontendHost, limitBody, rateLimit, requireSameOrigin, securityHeaders } from './security';
 import type { WorkingCopy } from './workingCopy';
 
@@ -53,6 +53,10 @@ const GENDERS: Gender[] = ['female', 'male'];
 
 const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_SAVE_ENTRIES = 200;
+const MAX_FILENAME_LENGTH = 255;
+const MAX_NAME_LENGTH = 100;
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 interface SaveEntry {
   name: string;
@@ -251,7 +255,7 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
     return wc.commitMessage(`update: dados ${dd}/${mm}/${yyyy}`, user);
   }
 
-  app.use('/api/analyze', limitBody(MAX_IMAGE_BYTES));
+  app.use('/api/analyze', limitBody(Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 64 * 1024));
   app.post('/api/analyze', async (c) => {
     const { name, mimeType, data } = await readJsonBody(c.req);
     const source = await deps.workingCopy(c.env).load();
@@ -295,6 +299,9 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
   app.post('/api/save', async (c) => {
     const { entries: rawEntries } = await readJsonBody(c.req);
     if (!Array.isArray(rawEntries) || rawEntries.length === 0) throw new HttpError(400, 'Nenhum registro para salvar');
+    if (rawEntries.length > MAX_SAVE_ENTRIES) {
+      throw new HttpError(400, `Registros demais: máximo de ${MAX_SAVE_ENTRIES} por envio`);
+    }
 
     const wc = deps.workingCopy(c.env);
     const cache = deps.imageCache(c.env);
@@ -314,7 +321,9 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
       if (typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash)) {
         throw new HttpError(400, `Hash inválido para ${canonicalName}`);
       }
-      if (typeof filename !== 'string') throw new HttpError(400, `Nome do arquivo inválido para ${canonicalName}`);
+      if (typeof filename !== 'string' || filename.length > MAX_FILENAME_LENGTH || CONTROL_CHARS.test(filename)) {
+        throw new HttpError(400, `Nome do arquivo inválido para ${canonicalName}`);
+      }
       if (hashes.has(hash) || (await cache.get(hash))) {
         throw new HttpError(409, `Imagem ${filename} (${canonicalName}) já foi processada`);
       }
@@ -352,7 +361,7 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
       try {
         await cache.set(entry.hash, cacheEntry);
       } catch (err) {
-        logWarn('falha ao gravar imagem no cache após o commit', {
+        logError('falha ao gravar imagem no cache após o commit', {
           hash: entry.hash.slice(0, 12),
           err: err instanceof Error ? { name: err.name, message: err.message } : { message: String(err) },
         });
@@ -374,6 +383,8 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
   app.post('/api/runners', async (c) => {
     const { name, gender } = await readJsonBody(c.req);
     if (typeof name !== 'string' || !name.trim()) throw new HttpError(400, 'Nome do participante é obrigatório');
+    if (name.length > MAX_NAME_LENGTH || CONTROL_CHARS.test(name))
+      throw new HttpError(400, 'Nome do participante inválido');
     if (gender !== 'female' && gender !== 'male') throw new HttpError(400, `Gênero inválido: ${gender}`);
 
     const wc = deps.workingCopy(c.env);
@@ -428,7 +439,13 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
     );
 
     // Só depois do commit: o cache de imagens é do mês anterior
-    await deps.imageCache(c.env).clear();
+    try {
+      await deps.imageCache(c.env).clear();
+    } catch (err) {
+      logError('falha ao limpar o cache de imagens após o commit', {
+        err: err instanceof Error ? { name: err.name, message: err.message } : { message: String(err) },
+      });
+    }
     logInfo('novo mês gerado', { month, createdFiles });
     return c.json({ createdFiles, state: buildState(await wc.load(), { month, year }) });
   });
@@ -438,13 +455,15 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
     if (typeof autoMerge !== 'boolean') throw new HttpError(400, 'Informe se o merge deve ser automático');
 
     const wc = deps.workingCopy(c.env);
+    const { month, year } = currentPeriod(deps.now(), c.env);
+    // o markdown sai antes do publish: se a leitura falhar, nada foi publicado e o usuário pode tentar de novo
+    const markdown = buildRankingMarkdown(month, year, await wc.load());
     const startedAt = Date.now();
     const { prUrl, merged } = await wc.publish(autoMerge);
     const log = `Pull request: ${prUrl}\n${merged ? 'Merge automático concluído.' : 'PR aberto sem merge.'}`;
     logInfo('publicação concluída', { autoMerge, prUrl, durationMs: Date.now() - startedAt });
 
-    const { month, year } = currentPeriod(deps.now(), c.env);
-    return c.json({ log, prUrl, markdown: buildRankingMarkdown(month, year, await wc.load()) });
+    return c.json({ log, prUrl, markdown });
   });
 
   app.onError(onError);
