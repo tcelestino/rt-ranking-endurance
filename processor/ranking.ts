@@ -1,7 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { DataSource, fsDataSource } from './dataSource';
 import { loadParticipants, normalize } from './participantsParser';
-import { getDataFilePath, getMonthName, loadMonthDataSync } from './jsonUpdater';
+import { getMonthName, loadMonthDataSync, monthRelPath } from './jsonUpdater';
 import { addPaceTotals, averagePace, formatPace, PaceTotals, paceTotals } from './pace';
 
 export interface RunnerResult {
@@ -46,19 +45,14 @@ export interface RankingPeriod {
   months: number[];
 }
 
-const DATA_DIR = path.resolve('data');
 const GENDERS = ['female', 'male'] as const;
 
-export function listRankingPeriods(): RankingPeriod[] {
-  if (!fs.existsSync(DATA_DIR)) return [];
-
-  return fs
-    .readdirSync(DATA_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^\d{4}$/.test(entry.name))
-    .map((entry) => {
-      const year = Number(entry.name);
+export function listRankingPeriods(source: DataSource = fsDataSource): RankingPeriod[] {
+  return source
+    .listYears()
+    .map((year) => {
       const months = Array.from({ length: 12 }, (_, i) => i + 1).filter((month) =>
-        GENDERS.some((gender) => fs.existsSync(getDataFilePath(gender, month, year))),
+        GENDERS.some((gender) => source.readText(monthRelPath(gender, month, year)) !== null),
       );
       return { year, months };
     })
@@ -66,10 +60,15 @@ export function listRankingPeriods(): RankingPeriod[] {
     .sort((a, b) => a.year - b.year);
 }
 
-export function calcMonthlyRanking(gender: 'female' | 'male', month: number, year?: number): RunnerResult[] {
-  const participants = loadParticipants();
+export function calcMonthlyRanking(
+  gender: 'female' | 'male',
+  month: number,
+  year?: number,
+  source: DataSource = fsDataSource,
+): RunnerResult[] {
+  const participants = loadParticipants(source);
   const names = gender === 'female' ? participants.female : participants.male;
-  const data = loadMonthDataSync(gender, month, year);
+  const data = loadMonthDataSync(gender, month, year, source);
 
   const kmMap = new Map<string, number>();
   const paceMap = new Map<string, PaceTotals>();
@@ -91,8 +90,8 @@ export function calcMonthlyRanking(gender: 'female' | 'male', month: number, yea
   return rankRunners(results);
 }
 
-export function calcAnnualRanking(year: number): RunnerResult[] {
-  const participants = loadParticipants();
+export function calcAnnualRanking(year: number, source: DataSource = fsDataSource): RunnerResult[] {
+  const participants = loadParticipants(source);
   const allNames = [...participants.female, ...participants.male];
 
   const totals = new Map<string, number>();
@@ -101,7 +100,7 @@ export function calcAnnualRanking(year: number): RunnerResult[] {
 
   for (let month = 1; month <= 12; month++) {
     for (const gender of GENDERS) {
-      for (const record of loadMonthDataSync(gender, month, year)) {
+      for (const record of loadMonthDataSync(gender, month, year, source)) {
         const key = normalize(record.name);
         const kmSum = record.km.reduce((a, b) => a + b, 0);
         totals.set(key, (totals.get(key) ?? 0) + kmSum);
@@ -139,10 +138,10 @@ function renderRankingSection(runners: RunnerResult[], filterZero = true): strin
   return lines.join('\n');
 }
 
-function buildMonthMarkdown(month: number, year: number): string {
+function buildMonthMarkdown(month: number, year: number, source: DataSource): string {
   const slug = getMonthName(month);
-  const female = calcMonthlyRanking('female', month, year);
-  const male = calcMonthlyRanking('male', month, year);
+  const female = calcMonthlyRanking('female', month, year, source);
+  const male = calcMonthlyRanking('male', month, year, source);
 
   return [
     `*RANKING ENDURANCE - ${MONTH_DISPLAY[slug]} ${year}*`,
@@ -156,11 +155,11 @@ function buildMonthMarkdown(month: number, year: number): string {
   ].join('\n');
 }
 
-function buildAnnualMarkdown(year: number): string {
-  const annual = calcAnnualRanking(year);
+function buildAnnualMarkdown(year: number, source: DataSource): string {
+  const annual = calcAnnualRanking(year, source);
   return ['', `*RANKING ANUAL - ${year}* 🏆 🏅`, renderRankingSection(annual, false), ''].join('\n');
 }
 
-export function buildRankingMarkdown(month: number, year: number): string {
-  return buildMonthMarkdown(month, year) + buildAnnualMarkdown(year);
+export function buildRankingMarkdown(month: number, year: number, source: DataSource = fsDataSource): string {
+  return buildMonthMarkdown(month, year, source) + buildAnnualMarkdown(year, source);
 }
