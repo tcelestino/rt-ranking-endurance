@@ -12,5 +12,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "../processor/cacheManager.ts", "../processor/dataSource.ts"]
+  "include": [
+    "src/**/*",
+    "../processor/cacheManager.ts",
+    "../processor/dataSource.ts",
+    "../processor/kmPrompt.ts",
+    "../processor/pace.ts"
+  ]
 }
