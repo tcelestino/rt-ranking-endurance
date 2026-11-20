@@ -78,6 +78,34 @@ export class GitHubRepo {
     return { status: res.status, data };
   }
 
+  // Árvore recursiva de ref (branch, tag ou sha), filtrada em data/**/*.json (sem .image-cache.json).
+  async listDataTree(ref: string): Promise<{ path: string; sha: string }[]> {
+    const { data } = await this.request('GET', `/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+    if (data.truncated) {
+      throw new GitHubError(500, `Árvore de ${ref} truncada pela API do GitHub; snapshot incompleto`);
+    }
+    return (data.tree as { path: string; type: string; sha: string }[])
+      .filter(
+        (e) =>
+          e.type === 'blob' &&
+          e.path.startsWith('data/') &&
+          e.path.endsWith('.json') &&
+          e.path !== 'data/.image-cache.json',
+      )
+      .map((e) => ({ path: e.path, sha: e.sha }));
+  }
+
+  // Conteúdo do blob decodificado como UTF-8 (sem Buffer: roda em Workers).
+  async getBlobText(sha: string): Promise<string> {
+    const { data } = await this.request('GET', `/git/blobs/${sha}`);
+    if (data.encoding !== 'base64') {
+      throw new GitHubError(500, `Blob ${sha} com encoding inesperado: ${data.encoding}`);
+    }
+    const binary = atob((data.content as string).replace(/\s/g, ''));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
   async getRefSha(branch: string): Promise<string | null> {
     const { status, data } = await this.request('GET', `/git/ref/heads/${branch}`, undefined, [404]);
     return status === 404 ? null : data.object.sha;

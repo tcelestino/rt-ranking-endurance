@@ -12,5 +12,5 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "../processor/cacheManager.ts"]
+  "include": ["src/**/*", "../processor/cacheManager.ts", "../processor/dataSource.ts"]
 }
