@@ -50,6 +50,7 @@ rt-ranking-endurance/
 │   ├── imageFiles.ts
 │   ├── cacheManager.ts
 │   ├── manifest.ts
+│   ├── manifestWriter.ts
 │   ├── ranking.ts
 │   ├── stats.ts
 │   ├── paceStats.ts
@@ -86,7 +87,7 @@ O projeto tem quatro partes independentes:
 
 ### Fluxo 2 — `npm run generate:manifest` (geração do manifest)
 
-**`processor/manifest.ts`** — lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
+**`processor/manifest.ts`** — puro (`planNewMonth`, `isManifestCurrent`, sem fs); **`processor/manifestWriter.ts`** — `generateManifest` (wrapper com fs, CLI `npm run generate:manifest`). Lê os arquivos `female-*.json` e `male-*.json` em `data/` e gera:
 - `data/manifest.json` — lista de meses disponíveis (slug, nome, mês/ano), consumida pelo frontend via API
 
 ### Backoffice — `npm run backoffice`

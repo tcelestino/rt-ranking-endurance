@@ -4,7 +4,7 @@
   "description": "Automação de atualização de rankings de corrida",
   "scripts": {
     "update": "tsx processor/index.ts",
-    "generate:manifest": "tsx processor/manifest.ts",
+    "generate:manifest": "tsx processor/manifestWriter.ts",
     "generate:markdown": "tsx processor/markdownGenerator.ts",
     "clear:images": "tsx processor/clearImages.ts",
     "clear:cache": "tsx processor/clearCache.ts",

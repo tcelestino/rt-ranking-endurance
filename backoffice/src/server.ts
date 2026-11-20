@@ -13,7 +13,8 @@ import { extractActivityFromImageBuffer } from '../../processor/imageAnalyzerClo
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
 import { appendKm, getMonthName } from '../../processor/jsonUpdater';
 import { loadMonthData, saveMonthData, saveParticipants } from '../../processor/jsonWriter';
-import { generateManifest, isManifestCurrent } from '../../processor/manifest';
+import { isManifestCurrent } from '../../processor/manifest';
+import { generateManifest } from '../../processor/manifestWriter';
 import { averagePace, isValidPace, paceTotals } from '../../processor/pace';
 import { writeRankingMarkdown } from '../../processor/markdownGenerator';
 import {
