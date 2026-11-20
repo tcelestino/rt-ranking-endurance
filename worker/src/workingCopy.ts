@@ -24,6 +24,8 @@ interface Deps {
 
 const BASE = 'main';
 const BRANCH_PREFIX = 'update-';
+// Ignora branches de outros fluxos (ex.: update-manifest-MM-YYYY).
+const BRANCH_NAME = /^update-\d{2}-\d{2}-\d{4}(-\d+)?$/;
 
 // Partes da data no fuso de Brasília.
 function brasiliaDate(now: Date): { dd: string; mm: string; yyyy: string } {
@@ -45,7 +47,7 @@ export class WorkingCopy {
   // Entre várias, prefere a com PR aberto; senão a primeira em ordem de nome.
   private async resolveBranch(): Promise<{ branch: string | null; obsolete: string[] }> {
     const { repo } = this.deps;
-    const names = (await repo.listBranches(BRANCH_PREFIX)).sort();
+    const names = (await repo.listBranches(BRANCH_PREFIX)).filter((n) => BRANCH_NAME.test(n)).sort();
     const obsolete: string[] = [];
     let fallback: string | null = null;
     let open: string | null = null;
@@ -149,8 +151,23 @@ export class WorkingCopy {
       (await this.deps.repo.findOpenPullRequest(branch)) ?? (await this.deps.repo.openPullRequest(branch, title, body));
     if (!autoMerge) return { prUrl: pr.url, merged: false };
 
-    await this.deps.repo.mergePullRequest(pr.number, title, body);
-    await this.deps.repo.deleteBranch(branch);
+    const headSha = (await this.deps.repo.getRefSha(branch)) ?? undefined;
+    try {
+      await this.deps.repo.mergePullRequest(pr.number, title, body, headSha);
+    } catch (err) {
+      if (err instanceof GitHubError && err.status === 409) {
+        throw new HttpError(409, 'A branch recebeu novos commits durante a publicação. Tente publicar novamente.');
+      }
+      if (err instanceof GitHubError && err.status === 405) {
+        throw new HttpError(
+          409,
+          `O GitHub recusou o merge automático (checks pendentes ou proteção da branch). Faça o merge pelo PR: ${pr.url}`,
+        );
+      }
+      throw err;
+    }
+    // O GitHub pode ter apagado a branch sozinho; o PR já está mergeado.
+    await this.deleteStale(branch);
     return { prUrl: pr.url, merged: true };
   }
 

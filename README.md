@@ -59,7 +59,7 @@ rt-ranking-endurance/
 │   ├── clearCache.ts             # Limpa o cache das imagens data/.image-cache.json
 │   ├── imageFiles.ts             # Funções para gerenciamento da pasta /images
 │   ├── manifest.ts               # Gera o data/manifest.json
-│   ├── jsonUpdater.ts            # Lê e escreve os arquivos JSON de dados
+│   ├── jsonUpdater.ts            # Lógica pura dos registros mensais (a escrita fica em jsonWriter.ts)
 │   ├── participantsParser.ts     # Carrega data/runners.json
 │   ├── imageAnalyzerCloudflare.ts # Workers AI (Cloudflare): extrai km da imagem (backoffice)
 │   ├── kmPrompt.ts               # Prompt e parse do km/pace compartilhados pelos analisadores

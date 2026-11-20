@@ -169,6 +169,13 @@ describe("GitHubRepo requisições", () => {
     assert.equal(call.method, "PUT");
     assert.ok(call.url.endsWith("/repos/o/r/pulls/7/merge"));
     assert.equal(call.body.merge_method, "squash");
+    assert.equal("sha" in call.body, false);
+  });
+
+  it("mergePullRequest envia o sha do head quando informado", async () => {
+    const { fake, calls } = makeFake();
+    await repoWith(fake).mergePullRequest(7, "titulo", "corpo", "head-abc");
+    assert.equal(calls[0].body.sha, "head-abc");
   });
 });
 

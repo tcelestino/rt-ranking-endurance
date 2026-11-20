@@ -7,6 +7,7 @@ Checklist para executar manualmente. Cada ação externa (Clerk, GitHub, Cloudfl
 - [ ] Acesso à conta Cloudflare com a zona `tcelestino.dev.br` e `npx wrangler login` feito
 - [ ] Acesso admin ao repositório no GitHub e ao dashboard do Clerk
 - [ ] `npm test && npm run backoffice:check && npm run worker:check` verdes
+- [ ] Conta no plano Workers Paid (ver seção 8: o plano Free não comporta o Worker)
 
 ## 1. Clerk de produção
 
@@ -67,10 +68,12 @@ Use `BASE=https://ranking-endurance.tcelestino.dev.br`.
 ## 6. Fluxo real
 
 - [ ] Enviar 1 print real: `analyze` devolve km e pace. Isso valida o formato de entrada do binding de IA para `@cf/meta/llama-3.2-11b-vision-instruct`; se ele não aceitar `image_url` em `messages`, trocar para o campo `image`, mantendo a assinatura de `analyzeImage`
-- [ ] Conferir que o tipo `Ai` real é atribuível a `AiBinding`
 - [ ] `save` cria a branch `update-DD-MM-YYYY` com 1 commit contendo o trailer `Backoffice-User`
 - [ ] `publish` sem merge abre o PR
 - [ ] `publish` com merge automático mergeia o PR
+- [ ] Merge automático com o check obrigatório pendente: o Worker responde 409 com a URL do PR e a branch não é apagada
+- [ ] `GET /repos/{repo}/git/trees/{commitSha}?recursive=1` com sha de commit funciona (usado por `saveOnce` para ler o snapshot do head)
+- [ ] A Cache API guarda blobs com a chave `https://blob.cache/<sha>` no domínio customizado (segunda requisição não refaz os `GET /git/blobs`)
 - [ ] O site público lê os dados novos
 
 ## 7. Rollback e rotação
@@ -83,5 +86,7 @@ Use `BASE=https://ranking-endurance.tcelestino.dev.br`.
 
 - Duas abas salvando a mesma imagem ao mesmo tempo só são barradas em sequência: o cache de hash no KV é eventualmente consistente.
 - A Cache API só funciona em domínio customizado, não em `workers.dev`, e é por data center.
-- O plano gratuito limita subrequests a 50; o primeiro carregamento do snapshot usa ~30 blobs. Depois, o cache por SHA evita as requisições.
+- Exige o plano Workers Paid (limite de 1000 subrequests por requisição e mais CPU). Conta aproximada de um `save` com cache frio: ~40-45 subrequests (1 árvore + ~24 blobs por ano de dados + branch/commit/KV/ref). O Free permite 50 e o número de blobs cresce ~24 por ano.
+- `/api/analyze` codifica e decodifica base64 de imagens de vários MB, o que excede os 10 ms de CPU do plano Free.
+- Se for preciso rodar no Free, a saída é reduzir o snapshot (carregar só os anos necessários, ou GraphQL com aliases para buscar vários blobs em uma requisição).
 - O backoffice Express local continua existindo até a remoção ser confirmada.

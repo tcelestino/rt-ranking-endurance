@@ -86,7 +86,9 @@ O projeto tem quatro partes independentes:
 
 **`processor/imageAnalyzerGemini.ts`** — usa `gemini-2.0-flash` via `@google/genai`. Recebe o caminho da imagem e retorna `number` (km extraído).
 
-**`processor/jsonUpdater.ts`** — lê e escreve os arquivos JSON em `data/`. Funções principais: `loadMonthData`, `appendKm`, `saveMonthData`, `getDataFilePath`, `getMonthName`.
+**`processor/jsonUpdater.ts`** — lógica pura dos registros mensais (sem I/O em disco). Funções principais: `appendKm`, `getMonthName`, `monthRelPath`, `loadMonthDataSync`.
+
+**`processor/jsonWriter.ts`** — leitura e escrita dos JSONs em `data/` no disco: `loadMonthData`, `saveMonthData`, `getDataFilePath`, `saveParticipants`.
 
 **`processor/participantsParser.ts`** — carrega `data/runners.json` e expõe `loadParticipants()` e `findParticipant()`.
 
@@ -164,6 +166,7 @@ URL: `https://ranking-endurance.tcelestino.dev.br/backoffice`. O backoffice Expr
 - Cache de hash de imagens no KV `IMAGE_CACHE`; IA pelo binding Workers AI `AI`.
 - `processor/` recebe um `DataSource` por injeção: fs localmente, snapshot em memória no Worker (`dataSource.ts`, `jsonWriter.ts`, `manifestWriter.ts`).
 - Mês/ano são calculados em `America/Sao_Paulo`; `CURRENT_MONTH` sobrescreve o mês.
+- Exige o plano Workers Paid: cada `save` com cache frio faz ~40-45 subrequests (limite do Free: 50; cresce ~24 blobs por ano) e `/api/analyze` processa base64 de imagens de vários MB (CPU acima de 10 ms). No Free, a saída seria reduzir o snapshot (só os anos necessários / GraphQL com aliases). Detalhes em `worker/README.md`.
 
 **Segurança**
 - Clerk somente via `Authorization: Bearer` com `publicMetadata.role = "admin"`; cookies não são aceitos na API.

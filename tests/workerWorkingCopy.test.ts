@@ -13,6 +13,8 @@ interface FakeOpts {
   openPr?: boolean;
   latestPr?: Record<string, { state: 'open' | 'closed'; merged: boolean; headSha: string }>;
   branchShas?: Record<string, string>; // sha atual de cada branch (tem precedência sobre shas)
+  mergeError?: GitHubError;
+  deleteError?: GitHubError;
   shas?: string[]; // sha devolvido por getRefSha a cada chamada (o último se repete)
 }
 
@@ -70,11 +72,13 @@ function fakeRepo(opts: FakeOpts = {}) {
       calls.push(`openPullRequest:${head}:${title}:${body}`);
       return { number: 9, url: 'https://pr/9' };
     },
-    async mergePullRequest(number, title, body) {
-      calls.push(`mergePullRequest:${number}:${title}:${body}`);
+    async mergePullRequest(number, title, body, sha) {
+      calls.push(`mergePullRequest:${number}:${title}:${body}:${sha}`);
+      if (opts.mergeError) throw opts.mergeError;
     },
     async deleteBranch(name) {
       calls.push(`deleteBranch:${name}`);
+      if (opts.deleteError) throw opts.deleteError;
       const i = branches.indexOf(name);
       if (i >= 0) branches.splice(i, 1);
     },
@@ -229,7 +233,7 @@ test('publish(true) reutiliza PR aberto, faz squash e apaga a branch', async () 
   const result = await build(repo).wc.publish(true);
   assert.deepEqual(result, { prUrl: 'https://pr/7', merged: true });
   assert.ok(!calls.some((c) => c.startsWith('openPullRequest')));
-  const merge = calls.indexOf('mergePullRequest:7:Atualização: 20/05/2026:update: dados 20/05/2026');
+  const merge = calls.indexOf('mergePullRequest:7:Atualização: 20/05/2026:update: dados 20/05/2026:sha-main');
   assert.ok(merge >= 0);
   assert.equal(calls[merge + 1], 'deleteBranch:update-19-05-2026');
 });
@@ -325,4 +329,63 @@ test('PR fechado sem merge com head igual é obsoleto, mas só é apagado dentro
   assert.deepEqual(deletes(calls), []);
   await wc.save(copy, 'msg');
   assert.deepEqual(deletes(calls), ['deleteBranch:update-20-05-2026']);
+});
+
+test('publish(true) devolve merged mesmo se o delete da branch falhar com 404/422', async () => {
+  for (const status of [404, 422]) {
+    const { repo } = fakeRepo({
+      branches: [B],
+      changed: ['data/a.json'],
+      openPr: true,
+      deleteError: new GitHubError(status, 'já apagada'),
+    });
+    assert.deepEqual(await build(repo).wc.publish(true), { prUrl: 'https://pr/7', merged: true });
+  }
+});
+
+test('publish(true) passa o sha do head ao merge', async () => {
+  const { repo, calls } = fakeRepo({ branches: [B], changed: ['data/a.json'], branchShas: { [B]: 'sha-head' } });
+  await build(repo).wc.publish(true);
+  assert.ok(calls.some((c) => c.startsWith('mergePullRequest:9:') && c.endsWith(':sha-head')));
+});
+
+test('merge recusado (405) vira 409 com a URL do PR', async () => {
+  const { repo, calls } = fakeRepo({
+    branches: [B],
+    changed: ['data/a.json'],
+    openPr: true,
+    mergeError: new GitHubError(405, 'checks pendentes'),
+  });
+  await assert.rejects(
+    () => build(repo).wc.publish(true),
+    (err) =>
+      err instanceof HttpError &&
+      err.status === 409 &&
+      err.message.includes('https://pr/7') &&
+      /recusou o merge/.test(err.message),
+  );
+  assert.deepEqual(deletes(calls), []);
+});
+
+test('merge com head alterado (409) vira mensagem distinta', async () => {
+  const { repo } = fakeRepo({
+    branches: [B],
+    changed: ['data/a.json'],
+    openPr: true,
+    mergeError: new GitHubError(409, 'Head branch was modified'),
+  });
+  await assert.rejects(
+    () => build(repo).wc.publish(true),
+    (err) => err instanceof HttpError && err.status === 409 && /novos commits/.test(err.message),
+  );
+});
+
+test('só branches update-DD-MM-YYYY são consideradas', async () => {
+  const { repo } = fakeRepo({ branches: ['update-manifest-11-2026', 'update-20-11-2026'] });
+  const { wc, refs } = build(repo);
+  await wc.load();
+  assert.deepEqual(refs, ['update-20-11-2026']);
+  const so = build(fakeRepo({ branches: ['update-manifest-11-2026'] }).repo);
+  await so.wc.load();
+  assert.deepEqual(so.refs, ['main']);
 });

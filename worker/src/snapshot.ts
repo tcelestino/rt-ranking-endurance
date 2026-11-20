@@ -1,5 +1,6 @@
 import { memoryDataSource, type DataSource } from '../../processor/dataSource';
 import type { GitHubRepo } from './github';
+import { logWarn } from './logger';
 
 export interface BlobCache {
   get(sha: string): Promise<string | null>;
@@ -40,15 +41,25 @@ const blobUrl = (sha: string) => `https://blob.cache/${sha}`;
 
 export function cacheApiBlobCache(cache: CacheLike): BlobCache {
   return {
+    // Falha da Cache API vira cache miss / put ignorado: o cache é só otimização.
     async get(sha) {
-      const res = await cache.match(blobUrl(sha));
-      return res ? res.text() : null;
+      try {
+        const res = await cache.match(blobUrl(sha));
+        return res ? await res.text() : null;
+      } catch (err) {
+        logWarn('Cache API falhou ao ler blob', { err: String(err) });
+        return null;
+      }
     },
     async put(sha, text) {
-      await cache.put(
-        blobUrl(sha),
-        new Response(text, { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } }),
-      );
+      try {
+        await cache.put(
+          blobUrl(sha),
+          new Response(text, { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } }),
+        );
+      } catch (err) {
+        logWarn('Cache API falhou ao gravar blob', { err: String(err) });
+      }
     },
   };
 }

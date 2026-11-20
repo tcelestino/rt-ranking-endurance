@@ -227,11 +227,13 @@ export class GitHubRepo {
     return { number: data.number, url: data.html_url };
   }
 
-  async mergePullRequest(number: number, title: string, body: string): Promise<void> {
+  // Com sha, o GitHub recusa o merge (409) se o head do PR mudou desde a leitura.
+  async mergePullRequest(number: number, title: string, body: string, sha?: string): Promise<void> {
     await this.request('PUT', `/pulls/${number}/merge`, {
       merge_method: 'squash',
       commit_title: title,
       commit_message: body,
+      ...(sha ? { sha } : {}),
     });
   }
 

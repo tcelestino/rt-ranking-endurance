@@ -72,9 +72,7 @@ test('getBlobText decodifica UTF-8 (acentos)', async () => {
 });
 
 test('loadSnapshot baixa só blobs ausentes do cache e remove o prefixo data/', async () => {
-  const { repo, urls } = repoWith(
-    blobResponder({ 'sha-runners': '{"female":["José"],"male":[]}', 'sha-fem': '[1]' }),
-  );
+  const { repo, urls } = repoWith(blobResponder({ 'sha-runners': '{"female":["José"],"male":[]}', 'sha-fem': '[1]' }));
   const cache = memoryBlobCache({ 'sha-male': '[2]' });
   const ds = await loadSnapshot(repo, 'main', cache);
   const blobUrls = urls.filter((u) => u.includes('/git/blobs/'));
@@ -108,4 +106,18 @@ test('cacheApiBlobCache guarda e recupera por URL blob.cache/<sha>', async () =>
   await cache.put('abc', 'José');
   assert.ok(store.has('https://blob.cache/abc'));
   assert.equal(await cache.get('abc'), 'José');
+});
+
+test('cacheApiBlobCache trata erro da Cache API como miss e put ignorado', async () => {
+  const fake = {
+    async match(): Promise<Response | undefined> {
+      throw new Error('cache indisponível');
+    },
+    async put(): Promise<void> {
+      throw new Error('cache indisponível');
+    },
+  };
+  const cache = cacheApiBlobCache(fake);
+  assert.equal(await cache.get('abc'), null);
+  await cache.put('abc', 'x');
 });
