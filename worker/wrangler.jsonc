@@ -29,9 +29,12 @@
     { "binding": "IMAGE_CACHE", "id": "REPLACE_WITH_KV_ID" },
   ],
 
-  // 60 requisições a cada 60 s por chave
+  // 60 requisições a cada 60 s por chave.
+  // namespace_id deve ser único na conta Cloudflare; mude se outro Worker usar o mesmo valor.
   "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1201", "simple": { "limit": 60, "period": 60 } }],
 
+  // Valores de PRODUCAO. No `wrangler dev`, worker/.dev.vars sobrescreve estas vars: defina la ALLOWED_ORIGIN
+  // (http://localhost:8787) e um GITHUB_REPO de teste; nunca use o repositorio real em dev.
   "vars": {
     "ALLOWED_ORIGIN": "https://ranking-endurance.tcelestino.dev.br",
     "GITHUB_REPO": "tcelestino/rt-ranking-endurance",

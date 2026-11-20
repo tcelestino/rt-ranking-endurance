@@ -19,7 +19,7 @@ const app = createApp<Env>({
     });
   },
   imageCache: (env) => kvImageCache(env.IMAGE_CACHE),
-  analyze: (env, bytes, mimeType) => analyzeImage(env.AI, bytes, mimeType, env.CLOUDFLARE_AI_MODEL ?? undefined),
+  analyze: (env, bytes, mimeType) => analyzeImage(env.AI, bytes, mimeType, env.CLOUDFLARE_AI_MODEL),
   userSummary: (env, userId) => getUserSummary(env, userId),
   now: () => new Date(),
 });

@@ -478,8 +478,9 @@ export function createApp<E extends AppEnv>(deps: AppDeps<E>) {
   root.notFound((c) => {
     const path = c.req.path;
     const isRead = c.req.method === 'GET' || c.req.method === 'HEAD';
-    if (isRead && path === '/backoffice') return c.redirect('/backoffice/', 308);
-    if (isRead && path.startsWith('/backoffice/') && !path.startsWith('/backoffice/api/')) {
+    if (isRead && path === '/backoffice') return c.redirect(`/backoffice/${new URL(c.req.url).search}`, 308);
+    const isApi = path === '/backoffice/api' || path.startsWith('/backoffice/api/');
+    if (isRead && path.startsWith('/backoffice/') && !isApi) {
       return c.env.ASSETS.fetch(c.req.raw);
     }
     return notFound(c);

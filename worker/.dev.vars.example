@@ -1,4 +1,9 @@
 # Copie para worker/.dev.vars (ignorado pelo git) e preencha com chaves de DESENVOLVIMENTO.
+# O .dev.vars sobrescreve as `vars` do wrangler.jsonc no `wrangler dev`.
+# NUNCA use em dev os valores de producao de GITHUB_REPO e ALLOWED_ORIGIN: com um GITHUB_TOKEN valido,
+# Salvar/Publicar locais fariam commits e PRs no repositorio real.
+ALLOWED_ORIGIN=http://localhost:8787
+GITHUB_REPO=SEU_USUARIO/rt-ranking-teste
 CLERK_SECRET_KEY=
 CLERK_PUBLISHABLE_KEY=
 GITHUB_TOKEN=

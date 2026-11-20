@@ -839,3 +839,30 @@ test('rota de API desconhecida responde 404 JSON sem consultar assets e /api/sta
   const state = await build({ verifyResult: { ok: false } }).request('/backoffice/api/state', {}, env());
   assert.equal(state.status, 401);
 });
+
+test('redirect de /backoffice preserva a query string', async () => {
+  const res = await build().request('/backoffice?x=1', {}, env());
+  assert.equal(res.status, 308);
+  assert.equal(res.headers.get('location'), '/backoffice/?x=1');
+});
+
+test('/backoffice/api sem barra final e tratado como API (404 JSON) e nao vai para assets', async () => {
+  const res = await build().request('/backoffice/api', {}, env());
+  assert.equal(res.status, 404);
+  assert.deepEqual(await res.json(), { error: 'Não encontrado' });
+});
+
+test('assets: HEAD em /backoffice/ chega ao ASSETS com headers de seguranca', async () => {
+  const methods: string[] = [];
+  const assets = {
+    fetch: async (req: Request) => {
+      methods.push(req.method);
+      return new Response(null, { status: 200 });
+    },
+  };
+  const res = await build().request('/backoffice/', { method: 'HEAD' }, env(true, { ASSETS: assets }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(methods, ['HEAD']);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'self'/);
+});
