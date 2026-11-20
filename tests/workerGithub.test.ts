@@ -124,11 +124,11 @@ describe("GitHubRepo.findLatestPullRequest", () => {
   it("consulta state=all ordenado e mapeia estado e merge", async () => {
     const { fake, calls } = makeFake((c) =>
       c.url.includes("/pulls?")
-        ? { json: [{ number: 3, html_url: "https://pr/3", state: "closed", merged_at: "2026-05-01T00:00:00Z" }] }
+        ? { json: [{ number: 3, html_url: "https://pr/3", state: "closed", merged_at: "2026-05-01T00:00:00Z", head: { sha: "pr-head" } }] }
         : undefined,
     );
     const pr = await repoWith(fake).findLatestPullRequest("update-x");
-    assert.deepEqual(pr, { number: 3, url: "https://pr/3", state: "closed", merged: true });
+    assert.deepEqual(pr, { number: 3, url: "https://pr/3", state: "closed", merged: true, headSha: "pr-head" });
     assert.match(calls[0].url, /state=all/);
     assert.match(calls[0].url, /sort=created&direction=desc&per_page=1/);
     assert.match(calls[0].url, /head=o%3Aupdate-x/);

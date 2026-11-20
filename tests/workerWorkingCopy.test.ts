@@ -11,7 +11,8 @@ interface FakeOpts {
   createConflicts?: number; // falhas 422 no createBranch (branch criada por outra aba)
   changed?: string[];
   openPr?: boolean;
-  latestPr?: Record<string, { state: 'open' | 'closed'; merged: boolean }>;
+  latestPr?: Record<string, { state: 'open' | 'closed'; merged: boolean; headSha: string }>;
+  branchShas?: Record<string, string>; // sha atual de cada branch (tem precedência sobre shas)
   shas?: string[]; // sha devolvido por getRefSha a cada chamada (o último se repete)
 }
 
@@ -23,6 +24,10 @@ function fakeRepo(opts: FakeOpts = {}) {
   const shas = [...(opts.shas ?? ['sha-main'])];
   const repo: WorkingCopyRepo = {
     async getRefSha(branch) {
+      if (opts.branchShas?.[branch]) {
+        calls.push(`getRefSha:${branch}:${opts.branchShas[branch]}`);
+        return opts.branchShas[branch];
+      }
       const sha = shas.length > 1 ? shas.shift()! : shas[0];
       calls.push(`getRefSha:${branch}:${sha}`);
       return sha;
@@ -189,17 +194,6 @@ test('nome da branch usa a data de Brasília', async () => {
   assert.ok(calls.includes('createBranch:update-30-11-2026:sha-main'));
 });
 
-test('branch com PR mergeado é apagada e ignorada; load usa main', async () => {
-  const { repo, calls } = fakeRepo({
-    branches: ['update-19-05-2026'],
-    latestPr: { 'update-19-05-2026': { state: 'closed', merged: true } },
-  });
-  const { wc, refs } = build(repo);
-  await wc.load();
-  assert.deepEqual(refs, ['main']);
-  assert.ok(calls.includes('deleteBranch:update-19-05-2026'));
-});
-
 test('escolha entre várias update-* é determinística: PR aberto, senão a primeira por nome', async () => {
   const lista = ['update-21-05-2026', 'update-19-05-2026', 'update-20-05-2026'];
   const semPr = build(fakeRepo({ branches: lista }).repo);
@@ -207,7 +201,8 @@ test('escolha entre várias update-* é determinística: PR aberto, senão a pri
   assert.deepEqual(semPr.refs, ['update-19-05-2026']);
 
   const comPr = build(
-    fakeRepo({ branches: lista, latestPr: { 'update-21-05-2026': { state: 'open', merged: false } } }).repo,
+    fakeRepo({ branches: lista, latestPr: { 'update-21-05-2026': { state: 'open', merged: false, headSha: 'x' } } })
+      .repo,
   );
   await comPr.wc.load();
   assert.deepEqual(comPr.refs, ['update-21-05-2026']);
@@ -259,4 +254,75 @@ test('commitMessage acrescenta o usuário (email ou id)', () => {
     'update: dados 20/05/2026\n\nBackoffice-User: a@b.c',
   );
   assert.equal(wc.commitMessage('x', { id: 'u1', email: null }), 'x\n\nBackoffice-User: u1');
+});
+
+const B = 'update-19-05-2026';
+const mergedPr = { state: 'closed' as const, merged: true, headSha: 'sha-antigo' };
+const deletes = (calls: string[]) => calls.filter((c) => c.startsWith('deleteBranch'));
+
+test('branch recriada no mesmo dia após merge não é obsoleta e nunca é apagada', async () => {
+  const { repo, calls } = fakeRepo({
+    branches: [B],
+    latestPr: { [B]: mergedPr },
+    branchShas: { [B]: 'sha-novo' },
+    changed: ['data/a.json'],
+  });
+  const { wc, refs } = build(repo);
+  await wc.load();
+  assert.deepEqual(refs, [B]);
+  assert.deepEqual(await wc.pendingChanges(), ['data/a.json']);
+  await wc.save(copy, 'msg');
+  await wc.publish(false);
+  assert.deepEqual(deletes(calls), []);
+  assert.ok(calls.some((c) => c.startsWith(`commitFiles:${B}:`)));
+});
+
+test('branch com head igual ao do PR mergeado é ignorada nas leituras sem apagar', async () => {
+  const { repo, calls } = fakeRepo({
+    branches: [B],
+    latestPr: { [B]: mergedPr },
+    branchShas: { [B]: 'sha-antigo' },
+    changed: ['data/a.json'],
+  });
+  const { wc, refs } = build(repo);
+  await wc.load();
+  assert.deepEqual(refs, ['main']);
+  assert.deepEqual(await wc.pendingChanges(), []);
+  await assert.rejects(
+    () => wc.publish(true),
+    (err) => err instanceof HttpError && err.status === 409,
+  );
+  assert.deepEqual(deletes(calls), []);
+});
+
+test('save com só uma branch obsoleta apaga e recria o mesmo nome', async () => {
+  const { repo, calls } = fakeRepo({
+    branches: ['update-20-05-2026'],
+    latestPr: { 'update-20-05-2026': mergedPr },
+    branchShas: { 'update-20-05-2026': 'sha-antigo' },
+    shas: ['sha-main'],
+  });
+  const { wc } = build(repo);
+  await wc.save(copy, 'msg');
+  const del = calls.indexOf('deleteBranch:update-20-05-2026');
+  const create = calls.indexOf('createBranch:update-20-05-2026:sha-main');
+  assert.ok(del >= 0 && create > del);
+  assert.ok(calls.some((c) => c.startsWith('commitFiles:update-20-05-2026:')));
+});
+
+test('PR fechado sem merge com head igual é obsoleto, mas só é apagado dentro de save', async () => {
+  const closed = { state: 'closed' as const, merged: false, headSha: 'sha-antigo' };
+  const { repo, calls } = fakeRepo({
+    branches: ['update-20-05-2026'],
+    latestPr: { 'update-20-05-2026': closed },
+    branchShas: { 'update-20-05-2026': 'sha-antigo' },
+    shas: ['sha-main'],
+  });
+  const { wc, refs } = build(repo);
+  await wc.load();
+  await wc.pendingChanges();
+  assert.deepEqual(refs, ['main']);
+  assert.deepEqual(deletes(calls), []);
+  await wc.save(copy, 'msg');
+  assert.deepEqual(deletes(calls), ['deleteBranch:update-20-05-2026']);
 });

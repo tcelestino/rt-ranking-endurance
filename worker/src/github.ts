@@ -24,6 +24,7 @@ export interface PullRequestRef {
 export interface LatestPullRequest extends PullRequestRef {
   state: 'open' | 'closed';
   merged: boolean;
+  headSha: string;
 }
 
 interface Options {
@@ -202,8 +203,18 @@ export class GitHubRepo {
     const owner = this.repo.split('/')[0];
     const query = `state=all&sort=created&direction=desc&per_page=1&head=${encodeURIComponent(`${owner}:${head}`)}`;
     const { data } = await this.request('GET', `/pulls?${query}`);
-    const pr = (data as { number: number; html_url: string; state: 'open' | 'closed'; merged_at: string | null }[])[0];
-    return pr ? { number: pr.number, url: pr.html_url, state: pr.state, merged: pr.merged_at != null } : null;
+    const pr = (
+      data as {
+        number: number;
+        html_url: string;
+        state: 'open' | 'closed';
+        merged_at: string | null;
+        head: { sha: string };
+      }[]
+    )[0];
+    return pr
+      ? { number: pr.number, url: pr.html_url, state: pr.state, merged: pr.merged_at != null, headSha: pr.head.sha }
+      : null;
   }
 
   async openPullRequest(head: string, title: string, body: string): Promise<PullRequestRef> {

@@ -40,22 +40,29 @@ function brasiliaDate(now: Date): { dd: string; mm: string; yyyy: string } {
 export class WorkingCopy {
   constructor(private deps: Deps) {}
 
-  // Branch update-* ativa: ignora (e apaga) as que têm PR fechado/mergeado como mais recente.
+  // Branch update-* ativa. Obsoleta = PR mais recente fechado/mergeado e head da branch igual ao do PR
+  // (sem commits novos desde então); essas são ignoradas, nunca apagadas aqui.
   // Entre várias, prefere a com PR aberto; senão a primeira em ordem de nome.
-  private async openBranch(): Promise<string | null> {
+  private async resolveBranch(): Promise<{ branch: string | null; obsolete: string[] }> {
     const { repo } = this.deps;
-    const branches = (await repo.listBranches(BRANCH_PREFIX)).sort();
+    const names = (await repo.listBranches(BRANCH_PREFIX)).sort();
+    const obsolete: string[] = [];
     let fallback: string | null = null;
-    for (const name of branches) {
+    let open: string | null = null;
+    for (const name of names) {
       const latest = await repo.findLatestPullRequest(name);
-      if (latest?.state === 'closed') {
-        await this.deleteStale(name);
+      if (latest?.state === 'closed' && (await repo.getRefSha(name)) === latest.headSha) {
+        obsolete.push(name);
         continue;
       }
-      if (latest?.state === 'open') return name;
+      if (latest?.state === 'open') open ??= name;
       fallback ??= name;
     }
-    return fallback;
+    return { branch: open ?? fallback, obsolete };
+  }
+
+  private async openBranch(): Promise<string | null> {
+    return (await this.resolveBranch()).branch;
   }
 
   private async deleteStale(name: string): Promise<void> {
@@ -98,7 +105,7 @@ export class WorkingCopy {
 
   private async saveOnce(build: (source: DataSource) => Record<string, string>, message: string): Promise<void> {
     const { repo } = this.deps;
-    const existing = await this.openBranch();
+    const { branch: existing, obsolete } = await this.resolveBranch();
     const baseSha = await repo.getRefSha(existing ?? BASE);
     if (!baseSha) {
       // Branch sumiu entre a listagem e a leitura (404 tratado como conflito); main ausente é erro real.
@@ -114,7 +121,11 @@ export class WorkingCopy {
     for (const [rel, content] of Object.entries(files)) repoFiles[`data/${rel}`] = content;
 
     const branch = existing ?? this.newBranchName();
-    if (!existing) await repo.createBranch(branch, baseSha);
+    if (!existing) {
+      // Única escrita sobre branch obsoleta: libera o nome para evitar 422 no createBranch.
+      if (obsolete.includes(branch)) await this.deleteStale(branch);
+      await repo.createBranch(branch, baseSha);
+    }
     await repo.commitFiles(branch, repoFiles, message, baseSha);
   }
 
