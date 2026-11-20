@@ -21,6 +21,11 @@ export interface PullRequestRef {
   url: string;
 }
 
+export interface LatestPullRequest extends PullRequestRef {
+  state: 'open' | 'closed';
+  merged: boolean;
+}
+
 interface Options {
   repo: string; // "owner/repo"
   token: string;
@@ -116,16 +121,30 @@ export class GitHubRepo {
     return (data as { ref: string }[]).map((r) => r.ref.replace('refs/heads/', ''));
   }
 
+  // 422: a branch já existe (criada por outra aba no meio).
   async createBranch(name: string, fromSha: string): Promise<void> {
-    await this.request('POST', '/git/refs', { ref: `refs/heads/${name}`, sha: fromSha });
+    try {
+      await this.request('POST', '/git/refs', { ref: `refs/heads/${name}`, sha: fromSha });
+    } catch (err) {
+      if (err instanceof GitHubError && err.status === 422) {
+        throw new RefConflictError(err.status, err.message);
+      }
+      throw err;
+    }
   }
 
   // Cria blobs, árvore e commit; a ref só se move no último passo (sem estado parcial).
-  async commitFiles(branch: string, files: Record<string, string | null>, message: string): Promise<string> {
+  // Com baseSha, o commit parte desse sha (sem rereler o head): se a branch andou, o PATCH falha com RefConflictError.
+  async commitFiles(
+    branch: string,
+    files: Record<string, string | null>,
+    message: string,
+    baseSha?: string,
+  ): Promise<string> {
     if (Object.keys(files).length === 0) {
       throw new Error('commitFiles: nenhum arquivo para commitar');
     }
-    const headSha = await this.getRefSha(branch);
+    const headSha = baseSha ?? (await this.getRefSha(branch));
     if (!headSha) throw new GitHubError(404, `Branch ${branch} não encontrada`);
     const { data: headCommit } = await this.request('GET', `/git/commits/${headSha}`);
 
@@ -176,6 +195,15 @@ export class GitHubRepo {
     const { data } = await this.request('GET', `/pulls?state=open&head=${encodeURIComponent(`${owner}:${head}`)}`);
     const pr = (data as { number: number; html_url: string }[])[0];
     return pr ? { number: pr.number, url: pr.html_url } : null;
+  }
+
+  // PR mais recente da branch em qualquer estado (aberto, fechado ou mergeado).
+  async findLatestPullRequest(head: string): Promise<LatestPullRequest | null> {
+    const owner = this.repo.split('/')[0];
+    const query = `state=all&sort=created&direction=desc&per_page=1&head=${encodeURIComponent(`${owner}:${head}`)}`;
+    const { data } = await this.request('GET', `/pulls?${query}`);
+    const pr = (data as { number: number; html_url: string; state: 'open' | 'closed'; merged_at: string | null }[])[0];
+    return pr ? { number: pr.number, url: pr.html_url, state: pr.state, merged: pr.merged_at != null } : null;
   }
 
   async openPullRequest(head: string, title: string, body: string): Promise<PullRequestRef> {

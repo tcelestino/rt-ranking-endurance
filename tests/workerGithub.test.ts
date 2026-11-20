@@ -105,6 +105,41 @@ describe("GitHubRepo.commitFiles", () => {
   });
 });
 
+describe("GitHubRepo.commitFiles com baseSha", () => {
+  it("usa o baseSha como pai e não relê o head", async () => {
+    const { fake, calls } = makeFake((c) =>
+      c.method === "GET" && c.url.includes("/git/commits/old-sha")
+        ? { json: { tree: { sha: "old-tree" } } }
+        : undefined,
+    );
+    await repoWith(fake).commitFiles("feat", { "data/a.json": "{}" }, "msg", "old-sha");
+    assert.equal(calls.some((c) => c.url.includes("/git/ref/heads/")), false);
+    assert.ok(calls.some((c) => c.method === "GET" && c.url.includes("/git/commits/old-sha")));
+    const commit = calls.find((c) => c.method === "POST" && c.url.endsWith("/git/commits"))!;
+    assert.deepEqual(commit.body.parents, ["old-sha"]);
+  });
+});
+
+describe("GitHubRepo.findLatestPullRequest", () => {
+  it("consulta state=all ordenado e mapeia estado e merge", async () => {
+    const { fake, calls } = makeFake((c) =>
+      c.url.includes("/pulls?")
+        ? { json: [{ number: 3, html_url: "https://pr/3", state: "closed", merged_at: "2026-05-01T00:00:00Z" }] }
+        : undefined,
+    );
+    const pr = await repoWith(fake).findLatestPullRequest("update-x");
+    assert.deepEqual(pr, { number: 3, url: "https://pr/3", state: "closed", merged: true });
+    assert.match(calls[0].url, /state=all/);
+    assert.match(calls[0].url, /sort=created&direction=desc&per_page=1/);
+    assert.match(calls[0].url, /head=o%3Aupdate-x/);
+  });
+
+  it("retorna null sem PR", async () => {
+    const { fake } = makeFake((c) => (c.url.includes("/pulls?") ? { json: [] } : undefined));
+    assert.equal(await repoWith(fake).findLatestPullRequest("update-x"), null);
+  });
+});
+
 describe("GitHubRepo requisições", () => {
   it("envia Authorization e a mensagem de erro não vaza o token", async () => {
     const { fake, calls } = makeFake(() => ({
