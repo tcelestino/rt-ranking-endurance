@@ -4,11 +4,18 @@ import * as crypto from 'crypto';
 import type { Logger } from 'pino';
 import { logger } from './logger';
 
-interface CacheEntry {
+export interface CacheEntry {
   km: number;
   pace?: number | null;
   date: string; // "YYYY-MM-DD"
   filename: string;
+}
+
+// Abstração do cache de imagens (fs no CLI/backoffice local, KV no worker)
+export interface ImageCache {
+  get(hash: string): Promise<CacheEntry | null>;
+  set(hash: string, entry: CacheEntry): Promise<void>;
+  clear(): Promise<void>;
 }
 
 type CacheFile = Record<string, CacheEntry>;
