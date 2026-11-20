@@ -58,7 +58,7 @@ test('headers de seguranca e CSP', async () => {
   assert.match(csp, /base-uri 'none'/);
   assert.match(csp, new RegExp(`script-src [^;]*https://cdn.jsdelivr.net[^;]*https://${CLERK_HOST}`));
   assert.match(csp, new RegExp(`connect-src 'self' https://${CLERK_HOST}`));
-  assert.match(csp, /img-src 'self' data: https:\/\/img.clerk.com/);
+  assert.match(csp, /img-src 'self' data: blob: https:\/\/img.clerk.com/);
 });
 
 test('Cache-Control no-store apenas em /api/*', async () => {
@@ -165,4 +165,58 @@ test('limitBody aceita corpo dentro do limite e GET sem Content-Length', async (
     200,
   );
   assert.equal((await app.request('/x')).status, 200);
+});
+
+test('CSP permite blob: em img-src, Turnstile em script-src e Chart.js so na versao exata', async () => {
+  const csp = (await buildApp().request('/page', {}, env())).headers.get('content-security-policy') ?? '';
+  assert.match(csp, /img-src [^;]*blob:/);
+  assert.match(csp, /script-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+  assert.match(csp, /script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@4\.4\.7\//);
+  assert.doesNotMatch(csp, /script-src [^;]*https:\/\/cdn\.jsdelivr\.net(?!\/npm)/);
+});
+
+test('securityHeaders aceita Response com headers imutaveis', async () => {
+  const app = buildApp();
+  app.get('/redirect', () => Response.redirect('https://example.com/', 302));
+  const res = await app.request('/redirect', {}, env());
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.ok(res.headers.get('content-security-policy'));
+});
+
+test('clerkFrontendHost rejeita chave invalida e host com caracteres de injecao', () => {
+  assert.throws(() => clerkFrontendHost('pk_live'), /inválida/);
+  assert.throws(() => clerkFrontendHost('pk_live_@@@'), /inválida/);
+  assert.throws(() => clerkFrontendHost(`pk_live_${btoa('a.com; script-src *$')}`), /inválida/);
+});
+
+test('securityHeaders falha fechado com 500 e X-Robots-Tag quando a chave e invalida', async () => {
+  const originalError = console.error;
+  const lines: string[] = [];
+  console.error = (line: string) => lines.push(line);
+  try {
+    const bad = { ...env(), CLERK_PUBLISHABLE_KEY: 'pk_live_segredo-invalido' };
+    const res = await buildApp().request('/page', {}, bad);
+    assert.equal(res.status, 500);
+    assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+    assert.equal(lines.length, 1);
+    assert.ok(!lines[0].includes('segredo-invalido'));
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test('requireSameOrigin falha fechado com origin permitido indefinido', async () => {
+  const app = new Hono();
+  app.use('*', requireSameOrigin(undefined as unknown as string));
+  app.post('/x', (c) => c.json({ ok: true }));
+  assert.equal((await app.request('/x', { method: 'POST' })).status, 403);
+});
+
+test('limitBody rejeita Content-Length invalido com 400', async () => {
+  const app = bodyApp();
+  for (const value of ['-1', '1e3', 'abc', '5.5', '0x10']) {
+    const res = await app.request('/x', { method: 'POST', headers: { 'content-length': value }, body: 'x' });
+    assert.equal(res.status, 400, JSON.stringify(value));
+  }
 });
