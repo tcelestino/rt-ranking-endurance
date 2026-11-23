@@ -11,8 +11,10 @@ import { summarizeExecError } from './logSafe';
 import { createRequestLogger } from './requestLogger';
 import { extractActivityFromImageBuffer } from '../../processor/imageAnalyzerCloudflare';
 import { computeHashFromBuffer, getCached, removeCache, storeCache } from '../../processor/cacheManager';
-import { appendKm, getMonthName, loadMonthData, saveMonthData } from '../../processor/jsonUpdater';
-import { generateManifest, isManifestCurrent } from '../../processor/manifest';
+import { appendKm, getMonthName } from '../../processor/jsonUpdater';
+import { loadMonthData, saveMonthData, saveParticipants } from '../../processor/jsonWriter';
+import { isManifestCurrent } from '../../processor/manifest';
+import { generateManifest } from '../../processor/manifestWriter';
 import { averagePace, isValidPace, paceTotals } from '../../processor/pace';
 import { writeRankingMarkdown } from '../../processor/markdownGenerator';
 import {
@@ -28,10 +30,9 @@ import {
   findParticipant,
   loadParticipants,
   removeParticipant,
-  saveParticipants,
 } from '../../processor/participantsParser';
 import { buildStats } from '../../processor/stats';
-import { capitalizeFirstLetter, getCurrentMonth } from '../../processor/utils';
+import { capitalizeFirstLetter, getCurrentMonth, getCurrentYear } from '../../processor/utils';
 
 type Gender = 'female' | 'male';
 
@@ -93,7 +94,7 @@ async function buildState() {
   return {
     month,
     monthName: getMonthName(month),
-    year: new Date().getFullYear(),
+    year: getCurrentYear(),
     manifestCurrent: isManifestCurrent(),
     participants: result,
   };
@@ -121,7 +122,7 @@ function parsePeriodParam(value: unknown, label: string, fallback: number): numb
 
 app.get('/api/ranking', (req, res, next) => {
   try {
-    const currentYear = new Date().getFullYear();
+    const currentYear = getCurrentYear();
     const currentMonth = getCurrentMonth();
     const periods = listRankingPeriods();
     const hasData = (y: number, m: number) => periods.some((p) => p.year === y && p.months.includes(m));
@@ -301,7 +302,7 @@ app.post('/api/new-month', async (req, res, next) => {
   try {
     if (isManifestCurrent()) {
       const month = getCurrentMonth();
-      throw new HttpError(409, `O manifest de ${getMonthName(month)}/${new Date().getFullYear()} já foi gerado`);
+      throw new HttpError(409, `O manifest de ${getMonthName(month)}/${getCurrentYear()} já foi gerado`);
     }
     removeCache();
     const { createdFiles } = generateManifest();

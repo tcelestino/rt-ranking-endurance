@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*",
+    "../processor/cacheManager.ts",
+    "../processor/dataSource.ts",
+    "../processor/kmPrompt.ts",
+    "../processor/pace.ts",
+    "../processor/jsonUpdater.ts",
+    "../processor/manifest.ts",
+    "../processor/participantsParser.ts",
+    "../processor/ranking.ts",
+    "../processor/stats.ts",
+    "../processor/paceStats.ts",
+    "../processor/utils.ts"
+  ]
+}

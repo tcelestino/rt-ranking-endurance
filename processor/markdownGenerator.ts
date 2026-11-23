@@ -1,12 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { getDataFilePath, getMonthName, getFullYear } from './jsonUpdater';
+import { getMonthName } from './jsonUpdater';
+import { getDataFilePath } from './jsonWriter';
 import { buildRankingMarkdown, MONTH_DISPLAY } from './ranking';
-import { getCurrentMonth } from './utils';
+import { getCurrentMonth, getCurrentYear } from './utils';
 
 export function writeRankingMarkdown(): string {
   const currentMonth = getCurrentMonth();
-  const year = getFullYear();
+  const year = getCurrentYear();
   const slug = getMonthName(currentMonth);
 
   const femaleFilePath = getDataFilePath('female', currentMonth);
@@ -31,7 +32,7 @@ function main() {
   try {
     writeRankingMarkdown();
     const slug = getMonthName(getCurrentMonth());
-    console.log(`output/ranking.md gerado com sucesso (${MONTH_DISPLAY[slug]} ${getFullYear()})`);
+    console.log(`output/ranking.md gerado com sucesso (${MONTH_DISPLAY[slug]} ${getCurrentYear()})`);
   } catch (error) {
     console.error(`Erro: ${error instanceof Error ? error.message : error}`);
     process.exit(1);

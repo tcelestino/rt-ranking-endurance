@@ -1,3 +1,6 @@
+// Base da API: sob /backoffice (Worker) usa /backoffice/api; no servidor Express local (serve em "/") usa /api.
+const API = window.location.pathname.startsWith('/backoffice') ? '/backoffice/api' : '/api';
+
 const state = {
   month: null,
   monthName: '',
@@ -276,7 +279,7 @@ async function analyzeAll() {
     item.status = 'analyzing';
     renderCards();
     try {
-      const result = await postJson('/api/analyze', { name, mimeType: item.mimeType, data: item.data });
+      const result = await postJson(`${API}/analyze`, { name, mimeType: item.mimeType, data: item.data });
       item.hash = result.hash;
       item.km = result.km;
       item.paceText = paceToInput(result.pace);
@@ -364,7 +367,7 @@ async function save() {
   $('save-btn').disabled = true;
   try {
     const entries = collectEntries();
-    applyState(await postJson('/api/save', { entries }));
+    applyState(await postJson(`${API}/save`, { entries }));
     for (const items of state.selected.values()) {
       for (const item of items) URL.revokeObjectURL(item.previewUrl);
     }
@@ -436,7 +439,7 @@ async function addRunner(event) {
   const name = nameInput.value.trim();
   $('runner-add-btn').disabled = true;
   try {
-    applyState(await postJson('/api/runners', { name, gender }));
+    applyState(await postJson(`${API}/runners`, { name, gender }));
     nameInput.value = '';
     refreshRunnerViews();
     showMessage(`${name} adicionado(a) em ${gender === 'female' ? 'Feminino' : 'Masculino'}.`, 'success');
@@ -451,7 +454,7 @@ async function removeRunner(name, button) {
   clearMessage();
   button.disabled = true;
   try {
-    applyState(await request(`/api/runners/${encodeURIComponent(name)}`, { method: 'DELETE' }));
+    applyState(await request(`${API}/runners/${encodeURIComponent(name)}`, { method: 'DELETE' }));
     state.pendingRemoval = null;
     if (state.selected.has(name)) toggleRunner(name, false);
     refreshRunnerViews();
@@ -492,7 +495,7 @@ async function startNewMonth() {
   clearMessage();
   $('new-month-confirm').disabled = true;
   try {
-    const { createdFiles, state: newState } = await postJson('/api/new-month', {});
+    const { createdFiles, state: newState } = await postJson(`${API}/new-month`, {});
     applyState(newState);
     refreshRunnerViews();
     closeNewMonth();
@@ -569,7 +572,7 @@ function renderRankingFilters() {
 async function loadRanking(year, month) {
   const params = year && month ? `?year=${year}&month=${month}` : '';
   try {
-    const data = await request(`/api/ranking${params}`);
+    const data = await request(`${API}/ranking${params}`);
     state.ranking = {
       year: data.year,
       month: data.month,
@@ -1077,7 +1080,7 @@ function renderStats(data) {
 async function loadStats(year) {
   try {
     await ensureChartJs();
-    const data = await request(`/api/stats${year ? `?year=${year}` : ''}`);
+    const data = await request(`${API}/stats${year ? `?year=${year}` : ''}`);
     state.stats = { year: data.year, data };
     renderStats(data);
   } catch (err) {
@@ -1089,7 +1092,7 @@ async function loadStats(year) {
 
 async function refreshPublishStatus() {
   try {
-    const { pendingChanges } = await request('/api/publish/status');
+    const { pendingChanges } = await request(`${API}/publish/status`);
     state.pendingChanges = pendingChanges;
     $('publish-btn').classList.toggle('attention', pendingChanges.length > 0);
     $('publish-btn').title =
@@ -1143,7 +1146,7 @@ async function publish() {
   confirmBtn.textContent = 'Publicando…';
   $('publish-btn').disabled = true;
   try {
-    const res = await apiFetch('/api/publish', {
+    const res = await apiFetch(`${API}/publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ autoMerge: $('publish-auto-merge').checked }),
@@ -1254,7 +1257,7 @@ function loadScript(src, attributes = {}) {
 }
 
 async function loadClerk() {
-  const res = await fetch('/api/config');
+  const res = await fetch(`${API}/config`);
   if (!res.ok) throw new Error(`Falha ao carregar configuração (HTTP ${res.status})`);
   const { publishableKey } = await res.json();
 
@@ -1301,7 +1304,7 @@ async function startApp() {
   showAuthStatus('Carregando…');
   unmountSignIn();
 
-  const res = await apiFetch('/api/state');
+  const res = await apiFetch(`${API}/state`);
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) return;
   if (!res.ok) {
